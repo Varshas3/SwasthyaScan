@@ -22,9 +22,9 @@ except ImportError:
     print("⚠️  TensorFlow/OpenCV not available — /predict will use demo mode")
 
 # ── Local modules ──────────────────────────────────────────────────────────
-from backend.score_engine import calculate_score
-from backend.question_selector import get_questions
-from backend.ai_selector import select_deficiencies
+from score_engine import calculate_score
+from question_selector import get_questions
+from ai_selector import select_deficiencies
 from question_selector import get_questions
 
 
