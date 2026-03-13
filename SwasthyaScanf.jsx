@@ -271,12 +271,9 @@ function UploadPage({ onNext }) {
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 24px 48px" }}>
         {/* Header */}
         <div style={{ textAlign: "center", paddingTop: 40 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(14,165,233,.08)", border: "1px solid rgba(14,165,233,.2)", borderRadius: 999, padding: "6px 16px", marginBottom: 20 }}>
-            <span style={{ fontSize: 18 }}>🏥</span>
-            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: "#0284c7", letterSpacing: 1, textTransform: "uppercase" }}>HEAL-A-Thon 2026 · PES University</span>
-          </div>
+
           <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: "clamp(2rem,5vw,3.2rem)", fontWeight: 800, color: "#0f172a", margin: 0, lineHeight: 1.1 }}>
-            Vital<span style={{ color: "#0ea5e9" }}>View</span> <span style={{ color: "#10b981" }}>AI</span>
+            Swasthya<span style={{ color: "#0ea5e9" }}>Scan</span>
           </h1>
           <p style={{ fontFamily: "'DM Sans', sans-serif", color: "#64748b", marginTop: 10, fontSize: 16, maxWidth: 480, margin: "10px auto 0" }}>
             AI-powered health screening through visual biomarkers & symptom analysis
@@ -365,7 +362,7 @@ function QuestionnairePage({ onNext, onBack }) {
       <div style={{ maxWidth: 740, margin: "0 auto", padding: "0 24px 48px" }}>
         <div style={{ textAlign: "center", paddingTop: 36 }}>
           <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: "clamp(1.6rem,4vw,2.4rem)", fontWeight: 800, color: "#0f172a", margin: 0 }}>
-            Vital<span style={{ color: "#0ea5e9" }}>View</span> <span style={{ color: "#10b981" }}>AI</span>
+            Swasthya<span style={{ color: "#0ea5e9" }}>Scan</span>
           </h1>
         </div>
 
@@ -484,7 +481,7 @@ function LoadingScreen() {
       <div style={{ textAlign: "center" }}>
         <div style={{ fontSize: 56, marginBottom: 16, animation: "pulse 1.5s ease-in-out infinite" }}>🫀</div>
         <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 32, fontWeight: 800, color: "#f0f9ff", margin: 0 }}>
-          Vital<span style={{ color: "#38bdf8" }}>View</span> <span style={{ color: "#34d399" }}>AI</span>
+          Swasthya<span style={{ color: "#38bdf8" }}>Scan</span>
         </h1>
         <p style={{ fontFamily: "'DM Sans', sans-serif", color: "#94a3b8", marginTop: 8, fontSize: 15 }}>Analyzing your health indicators</p>
       </div>
@@ -520,7 +517,7 @@ function DashboardPage({ onRestart, modelPayload }) {
       <div style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "16px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div>
           <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 24, fontWeight: 800, color: "#0f172a", margin: 0 }}>
-            Vital<span style={{ color: "#0ea5e9" }}>View</span> <span style={{ color: "#10b981" }}>AI</span>
+            Swasthya<span style={{ color: "#0ea5e9" }}>Scan</span>
           </h1>
           <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#64748b", marginTop: 2 }}>Health Screening Report · {new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</div>
         </div>
@@ -642,7 +639,7 @@ function DashboardPage({ onRestart, modelPayload }) {
         <div style={{ marginTop: 24, padding: "16px 20px", background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 12, display: "flex", gap: 12, alignItems: "flex-start" }}>
           <span style={{ fontSize: 18, flexShrink: 0 }}>ℹ️</span>
           <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#0c4a6e", margin: 0, lineHeight: 1.6 }}>
-            <strong>Disclaimer:</strong> VitalView AI is a prototype screening tool for HEAL-A-Thon 2026 and is not a substitute for professional medical diagnosis. Results are generated from mock data for demonstration purposes. Please consult a qualified healthcare professional for any health concerns.
+            <strong>Disclaimer:</strong> SwasthyaScan is a prototype screening tool and is not a substitute for professional medical diagnosis. Results are generated from mock data for demonstration purposes. Please consult a qualified healthcare professional for any health concerns.
           </p>
         </div>
       </div>
