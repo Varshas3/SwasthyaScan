@@ -28,79 +28,237 @@ const MOCK_RESULTS = {
   ],
 };
 
-// Keys map exactly to the model's expected JSON payload
+// ─── QUESTIONS ───────────────────────────────────────────────────────────────
+// Keys (qid) match the backend score_engine.py exactly:
+//   iron_q1..iron_q6, b12_q1..b12_q6, zinc_q1..zinc_q6, protein_q1..protein_q6
+//
+// The model predicts one or more of: iron, b12, zinc, protein.
+// ai_selector.py picks the top deficiencies; question_selector.py pulls the
+// matching rows from question_bank.py; score_engine.py sums scores using qid.
+//
+// The frontend sends { iron_q1: "Often", iron_q2: "No", ... } — each key is
+// the qid. score_engine strips the suffix to get the deficiency name and
+// accumulates the score accordingly.
+
 const QUESTIONS = [
+  // ── Iron ─────────────────────────────────────────────────────────────────
   {
-    key: "fatigue_breath",
-    text: "How often do you feel fatigued, short of breath, or low on energy during daily activities?",
-    category: "Energy & Breathing",
+    qid: "iron_q1",
+    text: "How often do you feel extreme fatigue or shortness of breath during mild activities like walking?",
+    category: "Fatigue & Breathing",
+    deficiency: "iron",
     icon: "😮‍💨",
     options: ["Often", "Sometimes", "Never"],
   },
   {
-    key: "pica",
-    text: "Do you have unusual cravings for non-food items like ice, chalk, clay, or dirt?",
+    qid: "iron_q2",
+    text: "Do you have strong cravings for non-food items such as ice, dirt, paper, or clay (pica)?",
     category: "Pica Symptoms",
+    deficiency: "iron",
     icon: "🧊",
     options: ["Yes", "No"],
   },
   {
-    key: "restless_legs",
-    text: "Do you experience an uncomfortable urge to move your legs, especially at night or when resting?",
+    qid: "iron_q3",
+    text: "Do you feel a restless sensation in your legs that worsens at night?",
     category: "Restless Legs",
+    deficiency: "iron",
     icon: "🦵",
     options: ["Often", "Sometimes", "Never"],
   },
   {
-    key: "tongue_change",
-    text: "Have you noticed any changes in your tongue — soreness, smoothness, swelling, or discoloration?",
+    qid: "iron_q4",
+    text: "Have you noticed your tongue becoming sore, smooth, or unusually red?",
     category: "Tongue Changes",
+    deficiency: "iron",
     icon: "👅",
     options: ["Yes", "No"],
   },
   {
-    key: "pale_skin",
-    text: "How often do people notice or you observe paleness in your skin, gums, or inner eyelids?",
+    qid: "iron_q5",
+    text: "Is the skin under your fingernails or inside your lower eyelids noticeably pale?",
     category: "Pallor / Pale Skin",
+    deficiency: "iron",
     icon: "🫠",
     options: ["Often", "Sometimes", "Never"],
   },
   {
-    key: "tinnitus",
-    text: "Do you experience ringing, buzzing, or whooshing sounds in your ears (tinnitus)?",
+    qid: "iron_q6",
+    text: "Do you experience ringing or buzzing in your ears (tinnitus)?",
     category: "Tinnitus",
+    deficiency: "iron",
     icon: "👂",
     options: ["Often", "Sometimes", "Never"],
   },
+
+  // ── B12 ──────────────────────────────────────────────────────────────────
   {
-    key: "hair_nail_brittle",
-    text: "Have you noticed increased hair fall, thinning, or brittle/spoon-shaped nails recently?",
+    qid: "b12_q1",
+    text: "Do you feel tingling, numbness, or 'pins and needles' in your hands or feet?",
+    category: "Nerve Sensation",
+    deficiency: "b12",
+    icon: "🫳",
+    options: ["Often", "Sometimes", "Never"],
+  },
+  {
+    qid: "b12_q2",
+    text: "Do you feel unsteady while walking or find yourself losing balance more often?",
+    category: "Balance",
+    deficiency: "b12",
+    icon: "🚶",
+    options: ["Often", "Sometimes", "Never"],
+  },
+  {
+    qid: "b12_q3",
+    text: "Have you noticed a decline in memory, difficulty thinking, or persistent brain fog?",
+    category: "Cognitive Function",
+    deficiency: "b12",
+    icon: "🧠",
+    options: ["Often", "Sometimes", "Never"],
+  },
+  {
+    qid: "b12_q4",
+    text: "Have you felt unusually irritable, depressed, or experienced sudden mood changes?",
+    category: "Mood Changes",
+    deficiency: "b12",
+    icon: "😔",
+    options: ["Often", "Sometimes", "Never"],
+  },
+  {
+    qid: "b12_q5",
+    text: "Is your tongue sore, red, or does it appear unusually smooth and shiny?",
+    category: "Tongue Changes",
+    deficiency: "b12",
+    icon: "👅",
+    options: ["Yes", "No"],
+  },
+  {
+    qid: "b12_q6",
+    text: "Do you feel persistent dizziness or lightheadedness when standing up?",
+    category: "Dizziness",
+    deficiency: "b12",
+    icon: "💫",
+    options: ["Often", "Sometimes", "Never"],
+  },
+
+  // ── Zinc ─────────────────────────────────────────────────────────────────
+  {
+    qid: "zinc_q1",
+    text: "Have you noticed food tastes bland or that your sense of smell has weakened?",
+    category: "Taste & Smell",
+    deficiency: "zinc",
+    icon: "👃",
+    options: ["Often", "Sometimes", "Never"],
+  },
+  {
+    qid: "zinc_q2",
+    text: "Do small cuts, scrapes, or sores take more than two weeks to heal completely?",
+    category: "Wound Healing",
+    deficiency: "zinc",
+    icon: "🩹",
+    options: ["Often", "Sometimes", "Never"],
+  },
+  {
+    qid: "zinc_q3",
+    text: "Have you experienced sudden thinning of your hair or patches of hair loss?",
+    category: "Hair Loss",
+    deficiency: "zinc",
+    icon: "💇",
+    options: ["Often", "Sometimes", "Never"],
+  },
+  {
+    qid: "zinc_q4",
+    text: "Do you have white spots, ridges, or horizontal lines on your fingernails?",
+    category: "Nail Changes",
+    deficiency: "zinc",
+    icon: "💅",
+    options: ["Yes", "No"],
+  },
+  {
+    qid: "zinc_q5",
+    text: "Do you seem to catch colds or infections more easily than those around you?",
+    category: "Immunity",
+    deficiency: "zinc",
+    icon: "🤧",
+    options: ["Often", "Sometimes", "Never"],
+  },
+  {
+    qid: "zinc_q6",
+    text: "Do you have persistent skin rashes or acne that does not respond to typical treatments?",
+    category: "Skin Issues",
+    deficiency: "zinc",
+    icon: "🫧",
+    options: ["Often", "Sometimes", "Never"],
+  },
+
+  // ── Protein ──────────────────────────────────────────────────────────────
+  {
+    qid: "protein_q1",
+    text: "Have you noticed unusual swelling or puffiness in your feet, ankles, or legs (edema)?",
+    category: "Edema / Swelling",
+    deficiency: "protein",
+    icon: "🦶",
+    options: ["Often", "Sometimes", "Never"],
+  },
+  {
+    qid: "protein_q2",
+    text: "Do you experience muscle weakness, cramps, or find physical tasks harder than before?",
+    category: "Muscle Weakness",
+    deficiency: "protein",
+    icon: "💪",
+    options: ["Often", "Sometimes", "Never"],
+  },
+  {
+    qid: "protein_q3",
+    text: "Has your hair become noticeably brittle, thin, or are you losing more hair than usual?",
     category: "Hair & Nails",
+    deficiency: "protein",
     icon: "💅",
     options: ["Often", "Sometimes", "Never"],
   },
   {
-    key: "cold_extremities",
-    text: "Do your hands or feet feel unusually cold even in normal or warm temperatures?",
-    category: "Circulation",
-    icon: "🥶",
+    qid: "protein_q4",
+    text: "Do your fingernails break easily, grow slowly, or show unusual ridges or discoloration?",
+    category: "Nail Changes",
+    deficiency: "protein",
+    icon: "🖐️",
+    options: ["Yes", "No"],
+  },
+  {
+    qid: "protein_q5",
+    text: "Do you feel hungry shortly after eating, or find it difficult to feel satisfied after meals?",
+    category: "Appetite & Satiety",
+    deficiency: "protein",
+    icon: "🍽️",
     options: ["Often", "Sometimes", "Never"],
   },
   {
-    key: "muscle_cramps",
-    text: "Do you experience muscle cramps, bone tenderness, or joint aches without obvious physical cause?",
-    category: "Musculoskeletal",
-    icon: "🦴",
+    qid: "protein_q6",
+    text: "Has your skin become noticeably flaky, dry, or developed unusual rashes recently?",
+    category: "Skin Changes",
+    deficiency: "protein",
+    icon: "🫧",
     options: ["Often", "Sometimes", "Never"],
-  },
-  {
-    key: "poor_wound_healing",
-    text: "Do minor cuts, bruises, or skin wounds take longer than usual to heal?",
-    category: "Wound Healing",
-    icon: "🩹",
-    options: ["Yes", "No", "Sometimes"],
   },
 ];
+
+// ─── NOTE FOR BACKEND INTEGRATION ────────────────────────────────────────────
+// The model predicts one or more of: "iron", "b12", "zinc", "protein"
+// (matching the model class names: iron_deficiency, vitamin_b12_deficiency,
+//  zinc_deficiency, protein_deficiency — strip the _deficiency suffix when
+//  looking up question_bank keys).
+//
+// Recommended flow:
+//   1. POST image(s) → /predict  → { iron: 0.82, b12: 0.31, zinc: 0.12, protein: 0.55 }
+//   2. ai_selector.py filters by threshold → ["iron", "protein"]
+//   3. question_selector.py returns iron_q1..iron_q6 + protein_q1..protein_q6
+//   4. Frontend renders ONLY those questions (filter QUESTIONS by deficiency)
+//   5. User answers → POST { iron_q1: "Often", protein_q3: "Yes", ... } → /score
+//   6. score_engine.py returns { iron: 7, protein: 4 }
+//   7. Merge with image confidence → final risk report
+//
+// For now, the questionnaire shows all deficiency groups. Once the backend
+// bridge is live, filter: QUESTIONS.filter(q => predicted.includes(q.deficiency))
 
 const BODY_PARTS = [
   { id: "nails", label: "Fingernails", description: "Capture all 10 nails in good lighting", icon: "🖐️", hint: "Flat, well-lit photo", required: true },
@@ -199,7 +357,6 @@ function UploadPage({ onNext }) {
   }, []);
 
   const requiredParts = BODY_PARTS.filter(p => p.required);
-  const optionalParts = BODY_PARTS.filter(p => !p.required);
   const uploadedRequired = requiredParts.filter(p => uploads[p.id]).length;
   const canProceed = uploadedRequired > 0;
 
@@ -224,7 +381,6 @@ function UploadPage({ onNext }) {
         }}>
         <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleFile(part.id, e.target.files[0])} />
 
-        {/* Required badge top-left when not uploaded */}
         {!img && (
           <div style={{
             position: "absolute", top: 10, left: 10,
@@ -269,9 +425,7 @@ function UploadPage({ onNext }) {
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 50%,#f0fdf4 100%)" }}>
       <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 24px 48px" }}>
-        {/* Header */}
         <div style={{ textAlign: "center", paddingTop: 40 }}>
-
           <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: "clamp(2rem,5vw,3.2rem)", fontWeight: 800, color: "#0f172a", margin: 0, lineHeight: 1.1 }}>
             Swasthya<span style={{ color: "#0ea5e9" }}>Scan</span>
           </h1>
@@ -323,22 +477,28 @@ function UploadPage({ onNext }) {
 }
 
 // ─── PAGE 2: QUESTIONNAIRE ───────────────────────────────────────────────────
-function QuestionnairePage({ onNext, onBack }) {
+function QuestionnairePage({ onNext, onBack, predictedDeficiencies = null }) {
   const [answers, setAnswers] = useState({});
   const [copied, setCopied] = useState(false);
-  const answered = Object.keys(answers).length;
-  const allAnswered = answered === QUESTIONS.length;
-  const progress = Math.round((answered / QUESTIONS.length) * 100);
 
-  // Build the exact JSON payload the model expects
-  const modelPayload = QUESTIONS.reduce((acc, q) => {
-    acc[q.key] = answers[q.key] ?? null;
+  // If predictedDeficiencies is provided (post-backend integration), filter
+  // to only relevant questions. Otherwise show all.
+  const activeQuestions = predictedDeficiencies
+    ? QUESTIONS.filter(q => predictedDeficiencies.includes(q.deficiency))
+    : QUESTIONS;
+
+  const answered = Object.keys(answers).length;
+  const progress = Math.round((answered / activeQuestions.length) * 100);
+
+  // Build payload: { iron_q1: "Often", b12_q3: "Sometimes", ... }
+  // Keys match score_engine.py exactly — no translation needed.
+  const modelPayload = activeQuestions.reduce((acc, q) => {
+    acc[q.qid] = answers[q.qid] ?? null;
     return acc;
   }, {});
 
   const handleAnalyze = () => {
-    // Log to console for teammate B to verify
-    console.log("📤 Model Payload:", JSON.stringify(modelPayload, null, 2));
+    console.log("📤 Model Payload (qid-keyed):", JSON.stringify(modelPayload, null, 2));
     onNext(modelPayload);
   };
 
@@ -348,12 +508,20 @@ function QuestionnairePage({ onNext, onBack }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Color logic per option value
   const optionColor = (opt) => {
     if (opt === "Yes" || opt === "Often") return { border: "#ef4444", bg: "#fef2f2", dot: "#ef4444" };
     if (opt === "Sometimes") return { border: "#f59e0b", bg: "#fffbeb", dot: "#f59e0b" };
     if (opt === "No" || opt === "Never") return { border: "#10b981", bg: "#f0fdf4", dot: "#10b981" };
     return { border: "#0ea5e9", bg: "#e0f2fe", dot: "#0ea5e9" };
+  };
+
+  // Group by deficiency for visual separation
+  const deficiencyOrder = ["iron", "b12", "zinc", "protein"];
+  const deficiencyLabels = {
+    iron: "Iron Deficiency",
+    b12: "Vitamin B12 Deficiency",
+    zinc: "Zinc Deficiency",
+    protein: "Protein Deficiency",
   };
 
   return (
@@ -372,7 +540,7 @@ function QuestionnairePage({ onNext, onBack }) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
             <div>
               <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 700, color: "#0f172a", margin: 0 }}>Symptom Questionnaire</h2>
-              <p style={{ fontFamily: "'DM Sans', sans-serif", color: "#64748b", marginTop: 4, fontSize: 14, margin: "6px 0 0" }}>{answered} of {QUESTIONS.length} answered</p>
+              <p style={{ fontFamily: "'DM Sans', sans-serif", color: "#64748b", marginTop: 4, fontSize: 14, margin: "6px 0 0" }}>{answered} of {activeQuestions.length} answered</p>
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 22, color: "#0ea5e9" }}>{progress}%</div>
@@ -384,48 +552,60 @@ function QuestionnairePage({ onNext, onBack }) {
             <div style={{ width: `${progress}%`, background: "linear-gradient(90deg,#0ea5e9,#10b981)", height: "100%", borderRadius: 999, transition: "width .5s ease" }} />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {QUESTIONS.map((q, i) => {
-              const isAnswered = !!answers[q.key];
-              return (
-                <div key={q.key} style={{ padding: "20px", borderRadius: 14, background: isAnswered ? "#f0f9ff" : "#f8fafc", border: `1.5px solid ${isAnswered ? "#bae6fd" : "#e2e8f0"}`, transition: "all .2s" }}>
-                  <div style={{ display: "flex", gap: 12, marginBottom: 14, alignItems: "flex-start" }}>
-                    <div style={{ minWidth: 28, height: 28, background: isAnswered ? "#0ea5e9" : "#e2e8f0", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: isAnswered ? "#fff" : "#94a3b8", fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 12, transition: "all .2s", flexShrink: 0 }}>
-                      {isAnswered ? "✓" : i + 1}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 16 }}>{q.icon}</span>
-                        <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, color: "#0ea5e9", textTransform: "uppercase", letterSpacing: 0.8 }}>{q.category}</div>
-                        {/* Show the model key as a subtle badge */}
-                        <div style={{ marginLeft: "auto", fontFamily: "monospace", fontSize: 10, color: "#94a3b8", background: "#f1f5f9", padding: "2px 8px", borderRadius: 4, border: "1px solid #e2e8f0" }}>{q.key}</div>
-                      </div>
-                      <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: "#1e293b", fontSize: 15, lineHeight: 1.5 }}>{q.text}</div>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: 10, paddingLeft: 40, flexWrap: "wrap" }}>
-                    {q.options.map(opt => {
-                      const selected = answers[q.key] === opt;
-                      const c = optionColor(opt);
-                      return (
-                        <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "8px 18px", borderRadius: 999, border: `2px solid ${selected ? c.border : "#e2e8f0"}`, background: selected ? c.bg : "#fff", transition: "all .15s" }}>
-                          <input type="radio" name={q.key} value={opt} checked={selected} onChange={() => setAnswers(a => ({ ...a, [q.key]: opt }))} style={{ display: "none" }} />
-                          <div style={{ width: 14, height: 14, borderRadius: "50%", border: `2px solid ${selected ? c.dot : "#cbd5e1"}`, background: selected ? c.dot : "transparent", transition: "all .15s" }} />
-                          <span style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, color: selected ? "#1e293b" : "#64748b" }}>{opt}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
+          {/* Questions grouped by deficiency */}
+          {deficiencyOrder.map(def => {
+            const group = activeQuestions.filter(q => q.deficiency === def);
+            if (group.length === 0) return null;
+            return (
+              <div key={def} style={{ marginBottom: 28 }}>
+                <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14, color: "#0f172a", marginBottom: 12, paddingBottom: 8, borderBottom: "1.5px solid #e2e8f0", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ background: "#e0f2fe", color: "#0284c7", borderRadius: 999, padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>{deficiencyLabels[def]}</span>
                 </div>
-              );
-            })}
-          </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {group.map((q, i) => {
+                    const isAnswered = !!answers[q.qid];
+                    return (
+                      <div key={q.qid} style={{ padding: "18px", borderRadius: 14, background: isAnswered ? "#f0f9ff" : "#f8fafc", border: `1.5px solid ${isAnswered ? "#bae6fd" : "#e2e8f0"}`, transition: "all .2s" }}>
+                        <div style={{ display: "flex", gap: 12, marginBottom: 12, alignItems: "flex-start" }}>
+                          <div style={{ minWidth: 26, height: 26, background: isAnswered ? "#0ea5e9" : "#e2e8f0", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: isAnswered ? "#fff" : "#94a3b8", fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 11, transition: "all .2s", flexShrink: 0 }}>
+                            {isAnswered ? "✓" : i + 1}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 15 }}>{q.icon}</span>
+                              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, color: "#0ea5e9", textTransform: "uppercase", letterSpacing: 0.8 }}>{q.category}</div>
+                              {/* qid badge — helps during dev/handoff */}
+                              <div style={{ marginLeft: "auto", fontFamily: "monospace", fontSize: 10, color: "#94a3b8", background: "#f1f5f9", padding: "2px 8px", borderRadius: 4, border: "1px solid #e2e8f0" }}>{q.qid}</div>
+                            </div>
+                            <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: "#1e293b", fontSize: 14, lineHeight: 1.5 }}>{q.text}</div>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 10, paddingLeft: 38, flexWrap: "wrap" }}>
+                          {q.options.map(opt => {
+                            const selected = answers[q.qid] === opt;
+                            const c = optionColor(opt);
+                            return (
+                              <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "7px 16px", borderRadius: 999, border: `2px solid ${selected ? c.border : "#e2e8f0"}`, background: selected ? c.bg : "#fff", transition: "all .15s" }}>
+                                <input type="radio" name={q.qid} value={opt} checked={selected} onChange={() => setAnswers(a => ({ ...a, [q.qid]: opt }))} style={{ display: "none" }} />
+                                <div style={{ width: 13, height: 13, borderRadius: "50%", border: `2px solid ${selected ? c.dot : "#cbd5e1"}`, background: selected ? c.dot : "transparent", transition: "all .15s" }} />
+                                <span style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, color: selected ? "#1e293b" : "#64748b" }}>{opt}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
 
-          {/* Live JSON Payload Preview — for dev/demo transparency */}
+          {/* Live JSON Payload Preview */}
           {answered > 0 && (
-            <div style={{ marginTop: 24, borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
+            <div style={{ marginTop: 20, borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
               <div style={{ background: "#0f172a", padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontFamily: "monospace", fontSize: 12, color: "#94a3b8" }}>📤 model_payload.json — {answered}/{QUESTIONS.length} filled</span>
+                <span style={{ fontFamily: "monospace", fontSize: 12, color: "#94a3b8" }}>📤 score_engine payload — {answered}/{activeQuestions.length} filled</span>
                 <button onClick={handleCopy} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 700, color: copied ? "#34d399" : "#38bdf8", background: "transparent", border: "none", cursor: "pointer" }}>
                   {copied ? "✓ Copied!" : "Copy JSON"}
                 </button>
@@ -433,12 +613,6 @@ function QuestionnairePage({ onNext, onBack }) {
               <pre style={{ background: "#1e293b", color: "#e2e8f0", fontFamily: "monospace", fontSize: 12, padding: "16px", margin: 0, overflowX: "auto", lineHeight: 1.7 }}>
                 {JSON.stringify(modelPayload, null, 2)}
               </pre>
-            </div>
-          )}
-
-          {!allAnswered && answered > 0 && (
-            <div style={{ marginTop: 16, padding: "10px 16px", background: "#fef9c3", border: "1px solid #fde68a", borderRadius: 10, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#92400e" }}>
-              ⚠️ {QUESTIONS.length - answered} question{QUESTIONS.length - answered > 1 ? "s" : ""} remaining — you can still proceed with partial answers
             </div>
           )}
 
@@ -506,14 +680,10 @@ function LoadingScreen() {
 
 // ─── PAGE 3: DASHBOARD ───────────────────────────────────────────────────────
 function DashboardPage({ onRestart, modelPayload }) {
-  const statusColors = { "High": "#ef4444", "Moderate": "#f59e0b", "Low Risk": "#10b981" };
-  const statusBgs = { "High": "#fef2f2", "Moderate": "#fffbeb", "Low Risk": "#f0fdf4" };
-
   return (
     <div style={{ minHeight: "100vh", background: "#f1f5f9" }}>
       <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 
-      {/* Top Bar */}
       <div style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "16px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div>
           <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 24, fontWeight: 800, color: "#0f172a", margin: 0 }}>
@@ -530,7 +700,6 @@ function DashboardPage({ onRestart, modelPayload }) {
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px 60px" }}>
         <StepIndicator current={2} />
 
-        {/* Risk Cards */}
         <div style={{ marginTop: 28 }}>
           <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700, color: "#0f172a", margin: "0 0 14px" }}>Health Risk Indicators</h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
@@ -551,7 +720,6 @@ function DashboardPage({ onRestart, modelPayload }) {
           </div>
         </div>
 
-        {/* Confidence Scores */}
         <div style={{ marginTop: 28, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <div style={{ background: "#fff", borderRadius: 16, padding: "28px", border: "1.5px solid #e2e8f0", boxShadow: "0 2px 10px rgba(0,0,0,.05)" }}>
             <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 700, color: "#0f172a", margin: "0 0 20px" }}>Confidence Scores</h3>
@@ -576,7 +744,6 @@ function DashboardPage({ onRestart, modelPayload }) {
           </div>
         </div>
 
-        {/* Image Analysis Markers */}
         <div style={{ marginTop: 24 }}>
           <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700, color: "#0f172a", margin: "0 0 14px" }}>Image Analysis Markers</h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 14 }}>
@@ -595,7 +762,6 @@ function DashboardPage({ onRestart, modelPayload }) {
           </div>
         </div>
 
-        {/* Recommendations */}
         <div style={{ marginTop: 24 }}>
           <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700, color: "#0f172a", margin: "0 0 14px" }}>Personalized Recommendations</h2>
           <div style={{ background: "#fff", borderRadius: 16, padding: "24px", border: "1.5px solid #e2e8f0", boxShadow: "0 2px 10px rgba(0,0,0,.05)" }}>
@@ -613,14 +779,12 @@ function DashboardPage({ onRestart, modelPayload }) {
           </div>
         </div>
 
-        {/* Model Payload Panel — shows what was sent to teammate B's model */}
+        {/* Submitted payload panel */}
         {modelPayload && (
           <div style={{ marginTop: 24, borderRadius: 16, border: "1.5px solid #e2e8f0", overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,.05)" }}>
-            <div style={{ background: "#0f172a", padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14, color: "#f0f9ff" }}>📤 Submitted Symptom Payload</span>
-                <span style={{ fontFamily: "monospace", fontSize: 11, color: "#64748b", marginLeft: 12 }}>— sent to prediction model</span>
-              </div>
+            <div style={{ background: "#0f172a", padding: "14px 20px" }}>
+              <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14, color: "#f0f9ff" }}>📤 Submitted Symptom Payload</span>
+              <span style={{ fontFamily: "monospace", fontSize: 11, color: "#64748b", marginLeft: 12 }}>— sent to score_engine.py</span>
             </div>
             <div style={{ background: "#1e293b", padding: "20px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
               {Object.entries(modelPayload).map(([key, val]) => (
@@ -635,7 +799,6 @@ function DashboardPage({ onRestart, modelPayload }) {
           </div>
         )}
 
-        {/* Disclaimer */}
         <div style={{ marginTop: 24, padding: "16px 20px", background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 12, display: "flex", gap: 12, alignItems: "flex-start" }}>
           <span style={{ fontSize: 18, flexShrink: 0 }}>ℹ️</span>
           <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#0c4a6e", margin: 0, lineHeight: 1.6 }}>
