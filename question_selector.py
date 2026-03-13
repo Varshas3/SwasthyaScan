@@ -1,4 +1,4 @@
-from question_bank import question_bank
+from backend.question_bank import question_bank
 
 def get_questions(predicted_deficiencies):
 
