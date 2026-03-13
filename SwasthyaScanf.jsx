@@ -37,7 +37,7 @@ const DEFICIENCY_LABELS = {
   iron: "Iron Deficiency", b12: "Vitamin B12 Deficiency",
   zinc: "Zinc Deficiency", protein: "Protein Deficiency",
 };
-
+const OPTION_ORDER = ["Never", "Sometimes", "Often", "Yes", "No"];
 const BODY_PARTS = [
   { id: "nails",  label: "Fingernails", description: "Capture all 10 nails in good lighting", icon: "🖐️", hint: "Flat, well-lit photo",  required: true },
   { id: "eyes",   label: "Eyes",        description: "Pull lower eyelid down slightly",         icon: "👁️", hint: "Clear, close-up shot",  required: true },
@@ -381,8 +381,8 @@ function QuestionnairePage({ onNext, onBack, predictResult }) {
                   {group.map((q, i) => {
                     const isAnswered = !!answers[q.qid];
                     const opts = q.options
-                      ? Object.keys(q.options)    // from question_bank (dict form)
-                      : (QUESTION_META[q.qid]?.options || []);
+  ? OPTION_ORDER.filter(o => Object.keys(q.options).includes(o))
+  : (QUESTION_META[q.qid]?.options || []);
                     return (
                       <div key={q.qid} style={{ padding:"18px", borderRadius:14,
                         background:isAnswered?"#f0f9ff":"#f8fafc",
