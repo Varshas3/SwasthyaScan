@@ -16,6 +16,7 @@ const MOCK_RESULTS = {
     { part: "Eyes", finding: "Mild conjunctival pallor", severity: "moderate", icon: "👁️" },
     { part: "Tongue", finding: "Tongue discoloration noted", severity: "high", icon: "👅" },
     { part: "Skin Patch", finding: "Dry skin texture observed", severity: "moderate", icon: "🫧" },
+    { part: "Lips", finding: "Lip pallor & mild dryness noted", severity: "moderate", icon: "👄" },
   ],
   recommendations: [
     { category: "Immediate", text: "Consider checking hemoglobin and serum ferritin levels", icon: "🔬" },
@@ -27,22 +28,86 @@ const MOCK_RESULTS = {
   ],
 };
 
+// Keys map exactly to the model's expected JSON payload
 const QUESTIONS = [
-  { id: 1, text: "Do you frequently feel fatigued or low on energy throughout the day?", category: "Energy" },
-  { id: 2, text: "Do you experience dizziness, lightheadedness, or frequent headaches?", category: "Neurological" },
-  { id: 3, text: "Have you noticed brittle nails, hair fall, or changes in hair texture?", category: "Physical Signs" },
-  { id: 4, text: "Do you experience unusual skin dryness, flakiness, or rough patches?", category: "Skin" },
-  { id: 5, text: "Do you feel dehydrated often, even after drinking water?", category: "Hydration" },
-  { id: 6, text: "Have you noticed pale gums, inner eyelids, or tongue discoloration?", category: "Oral / Ocular" },
-  { id: 7, text: "Do you experience muscle cramps, joint pain, or bone tenderness?", category: "Musculoskeletal" },
-  { id: 8, text: "Have you had difficulty concentrating or experienced memory issues recently?", category: "Cognitive" },
+  {
+    key: "fatigue_breath",
+    text: "How often do you feel fatigued, short of breath, or low on energy during daily activities?",
+    category: "Energy & Breathing",
+    icon: "😮‍💨",
+    options: ["Often", "Sometimes", "Never"],
+  },
+  {
+    key: "pica",
+    text: "Do you have unusual cravings for non-food items like ice, chalk, clay, or dirt?",
+    category: "Pica Symptoms",
+    icon: "🧊",
+    options: ["Yes", "No"],
+  },
+  {
+    key: "restless_legs",
+    text: "Do you experience an uncomfortable urge to move your legs, especially at night or when resting?",
+    category: "Restless Legs",
+    icon: "🦵",
+    options: ["Often", "Sometimes", "Never"],
+  },
+  {
+    key: "tongue_change",
+    text: "Have you noticed any changes in your tongue — soreness, smoothness, swelling, or discoloration?",
+    category: "Tongue Changes",
+    icon: "👅",
+    options: ["Yes", "No"],
+  },
+  {
+    key: "pale_skin",
+    text: "How often do people notice or you observe paleness in your skin, gums, or inner eyelids?",
+    category: "Pallor / Pale Skin",
+    icon: "🫠",
+    options: ["Often", "Sometimes", "Never"],
+  },
+  {
+    key: "tinnitus",
+    text: "Do you experience ringing, buzzing, or whooshing sounds in your ears (tinnitus)?",
+    category: "Tinnitus",
+    icon: "👂",
+    options: ["Often", "Sometimes", "Never"],
+  },
+  {
+    key: "hair_nail_brittle",
+    text: "Have you noticed increased hair fall, thinning, or brittle/spoon-shaped nails recently?",
+    category: "Hair & Nails",
+    icon: "💅",
+    options: ["Often", "Sometimes", "Never"],
+  },
+  {
+    key: "cold_extremities",
+    text: "Do your hands or feet feel unusually cold even in normal or warm temperatures?",
+    category: "Circulation",
+    icon: "🥶",
+    options: ["Often", "Sometimes", "Never"],
+  },
+  {
+    key: "muscle_cramps",
+    text: "Do you experience muscle cramps, bone tenderness, or joint aches without obvious physical cause?",
+    category: "Musculoskeletal",
+    icon: "🦴",
+    options: ["Often", "Sometimes", "Never"],
+  },
+  {
+    key: "poor_wound_healing",
+    text: "Do minor cuts, bruises, or skin wounds take longer than usual to heal?",
+    category: "Wound Healing",
+    icon: "🩹",
+    options: ["Yes", "No", "Sometimes"],
+  },
 ];
 
 const BODY_PARTS = [
-  { id: "nails", label: "Fingernails", description: "Capture all 10 nails in good lighting", icon: "🖐️", hint: "Flat, well-lit photo" },
-  { id: "eyes", label: "Eyes", description: "Pull lower eyelid down slightly", icon: "👁️", hint: "Clear, close-up shot" },
-  { id: "tongue", label: "Tongue", description: "Extend tongue fully under natural light", icon: "👅", hint: "Daylight preferred" },
-  { id: "skin", label: "Skin Patch", description: "Inner forearm or palm area works best", icon: "🫧", hint: "Clean, dry skin" },
+  { id: "nails", label: "Fingernails", description: "Capture all 10 nails in good lighting", icon: "🖐️", hint: "Flat, well-lit photo", required: true },
+  { id: "eyes", label: "Eyes", description: "Pull lower eyelid down slightly", icon: "👁️", hint: "Clear, close-up shot", required: true },
+  { id: "tongue", label: "Tongue", description: "Extend tongue fully under natural light", icon: "👅", hint: "Daylight preferred", required: true },
+  { id: "skin", label: "Skin Patch", description: "Inner forearm or palm area works best", icon: "🫧", hint: "Clean, dry skin", required: true },
+  { id: "lips", label: "Lips", description: "Relax lips naturally under good lighting", icon: "👄", hint: "Clear, natural light", required: true },
 ];
 
 // ─── HELPERS ────────────────────────────────────────────────────────────────
@@ -130,11 +195,75 @@ function UploadPage({ onNext }) {
 
   const onDrop = useCallback((id, e) => {
     e.preventDefault(); setDragging(null);
-    const file = e.dataTransfer.files[0];
-    handleFile(id, file);
+    handleFile(id, e.dataTransfer.files[0]);
   }, []);
 
-  const hasAny = Object.keys(uploads).length > 0;
+  const requiredParts = BODY_PARTS.filter(p => p.required);
+  const optionalParts = BODY_PARTS.filter(p => !p.required);
+  const uploadedRequired = requiredParts.filter(p => uploads[p.id]).length;
+  const canProceed = uploadedRequired > 0;
+
+  const renderCard = (part) => {
+    const img = uploads[part.id];
+    const isDragging = dragging === part.id;
+    const borderColor = img ? "#10b981" : isDragging ? "#0ea5e9" : part.required ? "#cbd5e1" : "#e2e8f0";
+    const bgColor = img ? "#f0fdf4" : isDragging ? "#f0f9ff" : part.required ? "#f8fafc" : "#fafbfc";
+
+    return (
+      <label key={part.id}
+        onDragOver={e => { e.preventDefault(); setDragging(part.id); }}
+        onDragLeave={() => setDragging(null)}
+        onDrop={e => onDrop(part.id, e)}
+        style={{
+          display: "block", cursor: "pointer", borderRadius: 16,
+          border: `2px dashed ${borderColor}`,
+          background: bgColor,
+          padding: 0, overflow: "hidden", transition: "all .2s",
+          boxShadow: isDragging ? "0 0 0 4px rgba(14,165,233,.15)" : img ? "0 0 0 4px rgba(16,185,129,.1)" : "none",
+          minHeight: 200, position: "relative",
+        }}>
+        <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleFile(part.id, e.target.files[0])} />
+
+        {/* Required badge top-left when not uploaded */}
+        {!img && (
+          <div style={{
+            position: "absolute", top: 10, left: 10,
+            background: "#fef2f2", color: "#ef4444",
+            border: "1px solid #fecaca",
+            borderRadius: 999, padding: "2px 8px",
+            fontFamily: "'DM Sans', sans-serif", fontSize: 10, fontWeight: 700,
+            textTransform: "uppercase", letterSpacing: 0.6,
+          }}>
+            Required
+          </div>
+        )}
+
+        {img ? (
+          <div style={{ position: "relative" }}>
+            <img src={img} alt={part.label} style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }} />
+            <div style={{ position: "absolute", top: 8, right: 8, background: "#10b981", borderRadius: 999, padding: "3px 10px", color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>✓ Uploaded</div>
+            <div style={{ padding: "12px 14px" }}>
+              <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: "#0f172a", fontSize: 14 }}>{part.icon} {part.label}</div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ padding: "28px 20px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 12, minHeight: 200, justifyContent: "center" }}>
+            <div style={{ fontSize: 40 }}>{part.icon}</div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: "#1e293b", fontSize: 14 }}>{part.label}</div>
+              <div style={{ fontFamily: "'DM Sans', sans-serif", color: "#94a3b8", fontSize: 12, marginTop: 4 }}>{part.description}</div>
+              <div style={{
+                display: "inline-block", marginTop: 8,
+                background: "#e0f2fe", color: "#0284c7",
+                borderRadius: 999, padding: "3px 10px", fontSize: 11, fontWeight: 600,
+              }}>{part.hint}</div>
+            </div>
+            <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#cbd5e1" }}>Click or drag & drop</div>
+          </div>
+        )}
+      </label>
+    );
+  };
 
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 50%,#f0fdf4 100%)" }}>
@@ -159,64 +288,33 @@ function UploadPage({ onNext }) {
         <div style={{ background: "#fff", borderRadius: 20, padding: "32px", boxShadow: "0 4px 24px rgba(0,0,0,.07)", marginTop: 24, border: "1px solid #e2e8f0" }}>
           <div style={{ marginBottom: 24 }}>
             <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 700, color: "#0f172a", margin: 0 }}>Upload Health Indicator Images</h2>
-            <p style={{ fontFamily: "'DM Sans', sans-serif", color: "#64748b", marginTop: 6, fontSize: 14 }}>Upload at least one image to continue. More images improve accuracy.</p>
+            <p style={{ fontFamily: "'DM Sans', sans-serif", color: "#64748b", marginTop: 6, fontSize: 14 }}>
+              Upload at least one image to continue. All 5 photos are required for full screening accuracy.
+            </p>
+            <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+              <div style={{ padding: "4px 12px", borderRadius: 999, background: uploadedRequired === requiredParts.length ? "#f0fdf4" : "#fef2f2", border: `1px solid ${uploadedRequired === requiredParts.length ? "#a7f3d0" : "#fecaca"}`, fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, color: uploadedRequired === requiredParts.length ? "#10b981" : "#ef4444" }}>
+                {uploadedRequired === requiredParts.length ? "✓" : "⚠️"} {uploadedRequired}/{requiredParts.length} photos uploaded
+              </div>
+            </div>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 16 }}>
-            {BODY_PARTS.map(part => {
-              const img = uploads[part.id];
-              const isDragging = dragging === part.id;
-              return (
-                <label key={part.id}
-                  onDragOver={e => { e.preventDefault(); setDragging(part.id); }}
-                  onDragLeave={() => setDragging(null)}
-                  onDrop={e => onDrop(part.id, e)}
-                  style={{
-                    display: "block", cursor: "pointer", borderRadius: 16,
-                    border: `2px dashed ${img ? "#10b981" : isDragging ? "#0ea5e9" : "#cbd5e1"}`,
-                    background: img ? "#f0fdf4" : isDragging ? "#f0f9ff" : "#f8fafc",
-                    padding: 0, overflow: "hidden", transition: "all .2s",
-                    boxShadow: isDragging ? "0 0 0 4px rgba(14,165,233,.15)" : img ? "0 0 0 4px rgba(16,185,129,.1)" : "none",
-                    minHeight: 200,
-                  }}>
-                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleFile(part.id, e.target.files[0])} />
-                  {img ? (
-                    <div style={{ position: "relative" }}>
-                      <img src={img} alt={part.label} style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }} />
-                      <div style={{ position: "absolute", top: 8, right: 8, background: "#10b981", borderRadius: 999, padding: "3px 10px", color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>✓ Uploaded</div>
-                      <div style={{ padding: "12px 14px" }}>
-                        <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: "#0f172a", fontSize: 14 }}>{part.icon} {part.label}</div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ padding: 24, display: "flex", flexDirection: "column", alignItems: "center", gap: 12, minHeight: 200, justifyContent: "center" }}>
-                      <div style={{ fontSize: 40 }}>{part.icon}</div>
-                      <div style={{ textAlign: "center" }}>
-                        <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: "#1e293b", fontSize: 14 }}>{part.label}</div>
-                        <div style={{ fontFamily: "'DM Sans', sans-serif", color: "#94a3b8", fontSize: 12, marginTop: 4 }}>{part.description}</div>
-                        <div style={{ display: "inline-block", marginTop: 8, background: "#e0f2fe", color: "#0284c7", borderRadius: 999, padding: "3px 10px", fontSize: 11, fontWeight: 600 }}>{part.hint}</div>
-                      </div>
-                      <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#cbd5e1" }}>Click or drag & drop</div>
-                    </div>
-                  )}
-                </label>
-              );
-            })}
+            {BODY_PARTS.map(renderCard)}
           </div>
 
-          {!hasAny && (
+          {!canProceed && (
             <div style={{ marginTop: 20, padding: "12px 16px", background: "#fef9c3", border: "1px solid #fde68a", borderRadius: 10, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#92400e", display: "flex", alignItems: "center", gap: 8 }}>
-              <span>⚠️</span> Upload at least one image to proceed with the screening
+              <span>⚠️</span> Upload at least one required image to proceed with the screening
             </div>
           )}
 
-          <button onClick={onNext} disabled={!hasAny}
+          <button onClick={onNext} disabled={!canProceed}
             style={{
               width: "100%", marginTop: 28, padding: "16px", borderRadius: 14,
-              background: hasAny ? "linear-gradient(135deg,#0ea5e9,#0284c7)" : "#e2e8f0",
-              color: hasAny ? "#fff" : "#94a3b8", border: "none", cursor: hasAny ? "pointer" : "not-allowed",
+              background: canProceed ? "linear-gradient(135deg,#0ea5e9,#0284c7)" : "#e2e8f0",
+              color: canProceed ? "#fff" : "#94a3b8", border: "none", cursor: canProceed ? "pointer" : "not-allowed",
               fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 16,
-              boxShadow: hasAny ? "0 4px 16px rgba(14,165,233,.35)" : "none",
+              boxShadow: canProceed ? "0 4px 16px rgba(14,165,233,.35)" : "none",
               transition: "all .2s", letterSpacing: 0.3,
             }}>
             Continue to Symptom Questionnaire →
@@ -230,8 +328,36 @@ function UploadPage({ onNext }) {
 // ─── PAGE 2: QUESTIONNAIRE ───────────────────────────────────────────────────
 function QuestionnairePage({ onNext, onBack }) {
   const [answers, setAnswers] = useState({});
+  const [copied, setCopied] = useState(false);
   const answered = Object.keys(answers).length;
+  const allAnswered = answered === QUESTIONS.length;
   const progress = Math.round((answered / QUESTIONS.length) * 100);
+
+  // Build the exact JSON payload the model expects
+  const modelPayload = QUESTIONS.reduce((acc, q) => {
+    acc[q.key] = answers[q.key] ?? null;
+    return acc;
+  }, {});
+
+  const handleAnalyze = () => {
+    // Log to console for teammate B to verify
+    console.log("📤 Model Payload:", JSON.stringify(modelPayload, null, 2));
+    onNext(modelPayload);
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(JSON.stringify(modelPayload, null, 2));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Color logic per option value
+  const optionColor = (opt) => {
+    if (opt === "Yes" || opt === "Often") return { border: "#ef4444", bg: "#fef2f2", dot: "#ef4444" };
+    if (opt === "Sometimes") return { border: "#f59e0b", bg: "#fffbeb", dot: "#f59e0b" };
+    if (opt === "No" || opt === "Never") return { border: "#10b981", bg: "#f0fdf4", dot: "#10b981" };
+    return { border: "#0ea5e9", bg: "#e0f2fe", dot: "#0ea5e9" };
+  };
 
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 50%,#f0fdf4 100%)" }}>
@@ -262,41 +388,76 @@ function QuestionnairePage({ onNext, onBack }) {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {QUESTIONS.map((q, i) => (
-              <div key={q.id} style={{ padding: "20px", borderRadius: 14, background: answers[q.id] ? "#f0f9ff" : "#f8fafc", border: `1.5px solid ${answers[q.id] ? "#bae6fd" : "#e2e8f0"}`, transition: "all .2s" }}>
-                <div style={{ display: "flex", gap: 12, marginBottom: 14, alignItems: "flex-start" }}>
-                  <div style={{ minWidth: 26, height: 26, background: answers[q.id] ? "#0ea5e9" : "#e2e8f0", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: answers[q.id] ? "#fff" : "#94a3b8", fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 12, transition: "all .2s" }}>
-                    {answers[q.id] ? "✓" : i + 1}
+            {QUESTIONS.map((q, i) => {
+              const isAnswered = !!answers[q.key];
+              return (
+                <div key={q.key} style={{ padding: "20px", borderRadius: 14, background: isAnswered ? "#f0f9ff" : "#f8fafc", border: `1.5px solid ${isAnswered ? "#bae6fd" : "#e2e8f0"}`, transition: "all .2s" }}>
+                  <div style={{ display: "flex", gap: 12, marginBottom: 14, alignItems: "flex-start" }}>
+                    <div style={{ minWidth: 28, height: 28, background: isAnswered ? "#0ea5e9" : "#e2e8f0", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: isAnswered ? "#fff" : "#94a3b8", fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 12, transition: "all .2s", flexShrink: 0 }}>
+                      {isAnswered ? "✓" : i + 1}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 16 }}>{q.icon}</span>
+                        <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, color: "#0ea5e9", textTransform: "uppercase", letterSpacing: 0.8 }}>{q.category}</div>
+                        {/* Show the model key as a subtle badge */}
+                        <div style={{ marginLeft: "auto", fontFamily: "monospace", fontSize: 10, color: "#94a3b8", background: "#f1f5f9", padding: "2px 8px", borderRadius: 4, border: "1px solid #e2e8f0" }}>{q.key}</div>
+                      </div>
+                      <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: "#1e293b", fontSize: 15, lineHeight: 1.5 }}>{q.text}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, color: "#0ea5e9", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>{q.category}</div>
-                    <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: "#1e293b", fontSize: 15, lineHeight: 1.5 }}>{q.text}</div>
+                  <div style={{ display: "flex", gap: 10, paddingLeft: 40, flexWrap: "wrap" }}>
+                    {q.options.map(opt => {
+                      const selected = answers[q.key] === opt;
+                      const c = optionColor(opt);
+                      return (
+                        <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "8px 18px", borderRadius: 999, border: `2px solid ${selected ? c.border : "#e2e8f0"}`, background: selected ? c.bg : "#fff", transition: "all .15s" }}>
+                          <input type="radio" name={q.key} value={opt} checked={selected} onChange={() => setAnswers(a => ({ ...a, [q.key]: opt }))} style={{ display: "none" }} />
+                          <div style={{ width: 14, height: 14, borderRadius: "50%", border: `2px solid ${selected ? c.dot : "#cbd5e1"}`, background: selected ? c.dot : "transparent", transition: "all .15s" }} />
+                          <span style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, color: selected ? "#1e293b" : "#64748b" }}>{opt}</span>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 10, paddingLeft: 38, flexWrap: "wrap" }}>
-                  {["Yes", "No", "Sometimes"].map(opt => (
-                    <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "8px 16px", borderRadius: 999, border: `2px solid ${answers[q.id] === opt ? (opt === "Yes" ? "#0ea5e9" : opt === "No" ? "#10b981" : "#f59e0b") : "#e2e8f0"}`, background: answers[q.id] === opt ? (opt === "Yes" ? "#e0f2fe" : opt === "No" ? "#f0fdf4" : "#fffbeb") : "#fff", transition: "all .15s" }}>
-                      <input type="radio" name={`q${q.id}`} value={opt} checked={answers[q.id] === opt} onChange={() => setAnswers(a => ({ ...a, [q.id]: opt }))} style={{ display: "none" }} />
-                      <div style={{ width: 14, height: 14, borderRadius: "50%", border: `2px solid ${answers[q.id] === opt ? (opt === "Yes" ? "#0ea5e9" : opt === "No" ? "#10b981" : "#f59e0b") : "#cbd5e1"}`, background: answers[q.id] === opt ? (opt === "Yes" ? "#0ea5e9" : opt === "No" ? "#10b981" : "#f59e0b") : "transparent", transition: "all .15s" }} />
-                      <span style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, color: answers[q.id] === opt ? "#1e293b" : "#64748b" }}>{opt}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          <div style={{ display: "flex", gap: 12, marginTop: 28 }}>
+          {/* Live JSON Payload Preview — for dev/demo transparency */}
+          {answered > 0 && (
+            <div style={{ marginTop: 24, borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
+              <div style={{ background: "#0f172a", padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontFamily: "monospace", fontSize: 12, color: "#94a3b8" }}>📤 model_payload.json — {answered}/{QUESTIONS.length} filled</span>
+                <button onClick={handleCopy} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 700, color: copied ? "#34d399" : "#38bdf8", background: "transparent", border: "none", cursor: "pointer" }}>
+                  {copied ? "✓ Copied!" : "Copy JSON"}
+                </button>
+              </div>
+              <pre style={{ background: "#1e293b", color: "#e2e8f0", fontFamily: "monospace", fontSize: 12, padding: "16px", margin: 0, overflowX: "auto", lineHeight: 1.7 }}>
+                {JSON.stringify(modelPayload, null, 2)}
+              </pre>
+            </div>
+          )}
+
+          {!allAnswered && answered > 0 && (
+            <div style={{ marginTop: 16, padding: "10px 16px", background: "#fef9c3", border: "1px solid #fde68a", borderRadius: 10, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#92400e" }}>
+              ⚠️ {QUESTIONS.length - answered} question{QUESTIONS.length - answered > 1 ? "s" : ""} remaining — you can still proceed with partial answers
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
             <button onClick={onBack} style={{ padding: "14px 28px", borderRadius: 12, border: "2px solid #e2e8f0", background: "#fff", fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 15, color: "#64748b", cursor: "pointer" }}>
               ← Back
             </button>
-            <button onClick={onNext}
+            <button onClick={handleAnalyze} disabled={answered === 0}
               style={{
                 flex: 1, padding: "14px", borderRadius: 12,
-                background: "linear-gradient(135deg,#0ea5e9,#0284c7)",
-                color: "#fff", border: "none", cursor: "pointer",
+                background: answered > 0 ? "linear-gradient(135deg,#0ea5e9,#0284c7)" : "#e2e8f0",
+                color: answered > 0 ? "#fff" : "#94a3b8", border: "none",
+                cursor: answered > 0 ? "pointer" : "not-allowed",
                 fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 16,
-                boxShadow: "0 4px 16px rgba(14,165,233,.35)",
+                boxShadow: answered > 0 ? "0 4px 16px rgba(14,165,233,.35)" : "none",
+                transition: "all .2s",
               }}>
               Analyze Results →
             </button>
@@ -347,7 +508,7 @@ function LoadingScreen() {
 }
 
 // ─── PAGE 3: DASHBOARD ───────────────────────────────────────────────────────
-function DashboardPage({ onRestart }) {
+function DashboardPage({ onRestart, modelPayload }) {
   const statusColors = { "High": "#ef4444", "Moderate": "#f59e0b", "Low Risk": "#10b981" };
   const statusBgs = { "High": "#fef2f2", "Moderate": "#fffbeb", "Low Risk": "#f0fdf4" };
 
@@ -455,6 +616,28 @@ function DashboardPage({ onRestart }) {
           </div>
         </div>
 
+        {/* Model Payload Panel — shows what was sent to teammate B's model */}
+        {modelPayload && (
+          <div style={{ marginTop: 24, borderRadius: 16, border: "1.5px solid #e2e8f0", overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,.05)" }}>
+            <div style={{ background: "#0f172a", padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14, color: "#f0f9ff" }}>📤 Submitted Symptom Payload</span>
+                <span style={{ fontFamily: "monospace", fontSize: 11, color: "#64748b", marginLeft: 12 }}>— sent to prediction model</span>
+              </div>
+            </div>
+            <div style={{ background: "#1e293b", padding: "20px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
+              {Object.entries(modelPayload).map(([key, val]) => (
+                <div key={key} style={{ background: "rgba(255,255,255,.05)", borderRadius: 10, padding: "10px 14px", border: "1px solid rgba(255,255,255,.08)" }}>
+                  <div style={{ fontFamily: "monospace", fontSize: 11, color: "#64748b", marginBottom: 4 }}>{key}</div>
+                  <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 15, color: val === "Often" || val === "Yes" ? "#f87171" : val === "Sometimes" ? "#fbbf24" : val === "Never" || val === "No" ? "#34d399" : "#94a3b8" }}>
+                    {val ?? <span style={{ color: "#475569", fontStyle: "italic" }}>unanswered</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Disclaimer */}
         <div style={{ marginTop: 24, padding: "16px 20px", background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 12, display: "flex", gap: 12, alignItems: "flex-start" }}>
           <span style={{ fontSize: 18, flexShrink: 0 }}>ℹ️</span>
@@ -470,12 +653,18 @@ function DashboardPage({ onRestart }) {
 // ─── APP SHELL ────────────────────────────────────────────────────────────────
 export default function App() {
   const [page, setPage] = useState("upload");
+  const [modelPayload, setModelPayload] = useState(null);
+
+  const handleQuestionnaireNext = (payload) => {
+    setModelPayload(payload);
+    setPage("loading");
+  };
 
   if (page === "upload") return <UploadPage onNext={() => setPage("questions")} />;
-  if (page === "questions") return <QuestionnairePage onNext={() => setPage("loading")} onBack={() => setPage("upload")} />;
+  if (page === "questions") return <QuestionnairePage onNext={handleQuestionnaireNext} onBack={() => setPage("upload")} />;
   if (page === "loading") {
     setTimeout(() => setPage("dashboard"), 5000);
     return <LoadingScreen />;
   }
-  if (page === "dashboard") return <DashboardPage onRestart={() => setPage("upload")} />;
+  if (page === "dashboard") return <DashboardPage onRestart={() => { setModelPayload(null); setPage("upload"); }} modelPayload={modelPayload} />;
 }
