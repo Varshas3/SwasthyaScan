@@ -25,6 +25,8 @@ except ImportError:
 from backend.score_engine import calculate_score
 from backend.question_selector import get_questions
 from backend.ai_selector import select_deficiencies
+from question_selector import get_questions
+
 
 app = FastAPI(title="SwasthyaScan API", version="1.0.0")
 
