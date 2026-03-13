@@ -185,6 +185,120 @@ question_bank = {
 }
 
 ],
+"protein": [
+
+{
+"id": "protein_q1",
+"text": "Have you noticed unusual swelling in your ankles, feet, or abdomen?",
+"options": {
+"Never": 0,
+"Sometimes": 3,
+"Often": 6
+}
+},
+
+{
+"id": "protein_q2",
+"text": "Have you noticed your muscles becoming noticeably smaller or 'wasted' looking?",
+"options": {
+"Never": 0,
+"Sometimes": 2,
+"Often": 4
+}
+},
+
+{
+"id": "protein_q3",
+"text": "Do you feel a significant loss of strength, such as having trouble climbing stairs?",
+"options": {
+"Never": 0,
+"Sometimes": 1,
+"Often": 2
+}
+},
+
+{
+"id": "protein_q4",
+"text": "Has your hair become very thin, brittle, or has it changed color or pigment?",
+"options": {
+"Yes": 2,
+"No": 0
+}
+},
+
+{
+"id": "protein_q5",
+"text": "Do you find yourself feeling constantly hungry, even shortly after eating a meal?",
+"options": {
+"Never": 0,
+"Sometimes": 1,
+"Often": 2
+}
+},
+
+{
+"id": "protein_q6",
+"text": "Do you have sores on your skin that are very slow to heal?",
+"options": {
+"Never": 0,
+"Sometimes": 1,
+"Often": 2
+}
+}
+
+],
+"dehydration": [
+
+{
+"id": "dehydration_q1",
+"text": "Do you feel unusually weak, dizzy, or tired during the day?",
+"options": {
+"Never": 0,
+"Sometimes": 1,
+"Often": 2
+}
+},
+
+{
+"id": "dehydration_q2",
+"text": "Do your eyes appear sunken or unusually tired?",
+"options": {
+"Never": 0,
+"Sometimes": 1,
+"Often": 2
+}
+},
+
+{
+"id": "dehydration_q3",
+"text": "Do you frequently feel that your mouth or tongue is dry?",
+"options": {
+"Never": 0,
+"Sometimes": 1,
+"Often": 2
+}
+},
+
+{
+"id": "dehydration_q4",
+"text": "Do you feel extremely thirsty even after drinking water?",
+"options": {
+"Never": 0,
+"Sometimes": 1,
+"Often": 2
+}
+},
+
+{
+"id": "dehydration_q5",
+"text": "Have you noticed reduced tear production when crying or irritated eyes?",
+"options": {
+"Yes": 2,
+"No": 0
+}
+}
+
+],
 
  
 }
