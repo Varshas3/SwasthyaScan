@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
 // Change this to your server address if running on a different machine/port
