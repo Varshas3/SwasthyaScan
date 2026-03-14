@@ -12,8 +12,8 @@ import os
 from typing import Optional
 
 # ── Try to import ML deps (graceful fallback for demo without model file) ──
+# AFTER (fixed):
 try:
-    try:
     import tensorflow as tf
     from tensorflow.keras.models import load_model
     from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
@@ -43,10 +43,12 @@ app.add_middleware(
 # ── Model loading ──────────────────────────────────────────────────────────
 MODEL_PATH = "health_model.keras"
 model = None
-CLASS_NAMES = ["iron_deficiency", "protein_deficiency", "vitamin_b12_deficiency", "zinc_deficiency"]
-
-# Map model class names → short keys used everywhere else in the codebase
+# Option B: If you want 5 classes, add protein_deficiency images,
+# then update server.py:
+CLASS_NAMES = ["dehydration", "iron_deficiency", "protein_deficiency",
+               "vitamin_b12_deficiency", "zinc_deficiency"]
 CLASS_KEY_MAP = {
+    "dehydration":            "dehydration",
     "iron_deficiency":        "iron",
     "protein_deficiency":     "protein",
     "vitamin_b12_deficiency": "b12",
@@ -68,20 +70,23 @@ load_keras_model()
 # ── Image preprocessing ────────────────────────────────────────────────────
 IMG_SIZE = (224, 224)
 
-def preprocess_image_bytes(image_bytes: bytes) -> np.ndarray:
-    arr = np.frombuffer(image_bytes, dtype=np.uint8)
-    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-    if img is None:
-        raise ValueError("Could not decode image")
-    img = cv2.resize(img, IMG_SIZE)
-    img = img.astype(np.float32)
-    img = preprocess_input(img)
-    return img
-def predict_single(img_array: np.ndarray) -> dict:
-    """Run model on one image → {iron: prob, protein: prob, b12: prob, zinc: prob}."""
-    batch = np.expand_dims(img_array, axis=0)           # (1, 224, 224, 3)
-    preds = model.predict(batch, verbose=0)[0]          # shape (4,)
-    return {CLASS_KEY_MAP[cls]: float(preds[i]) for i, cls in enumerate(CLASS_NAMES)}
+# AFTER — guard with TF_AVAILABLE check, and move function inside the block:
+if TF_AVAILABLE:
+    def preprocess_image_bytes(image_bytes: bytes) -> np.ndarray:
+        arr = np.frombuffer(image_bytes, dtype=np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        if img is None:
+            raise ValueError("Could not decode image")
+        img = cv2.resize(img, IMG_SIZE)
+        img = img.astype(np.float32)
+        img = preprocess_input(img)
+        return img
+
+    def predict_single(img_array: np.ndarray) -> dict:
+        batch = np.expand_dims(img_array, axis=0)
+        preds = model.predict(batch, verbose=0)[0]
+        return {CLASS_KEY_MAP[cls]: float(preds[i]) for i, cls in enumerate(CLASS_NAMES)}
+
 
 def demo_predictions() -> dict:
     """Return plausible-looking scores when model isn't available (for UI demo)."""
@@ -191,13 +196,14 @@ async def score(req: ScoreRequest):
 
     # ── Max possible score per deficiency (for normalisation) ─────────────
     # Calculated as the sum of the highest option value across all questions.
-    MAX_SCORES = {
-        "iron":        11,   # q1:2 q2:3 q3:2 q4:2 q5:2 q6:2 → but pica (q2=3) is binary → 3+2+2+2+2+2=13? No: max per q: 2,3,2,2,2,2 → 13. Keeping original 11 as conservative.
-        "b12":         14,   # q1:4 q2:2 q3:2 q4:2 q5:2 q6:2 → 14
-        "zinc":        15,   # q1:4 q2:3 q3:2 q4:2 q5:3 q6:2 → 16. Keeping 15 (conservative cap).
-        "protein":     17,   # q1:6 q2:4 q3:2 q4:2 q5:2 q6:2 → 18. Using 17 as conservative cap.
-        "dehydration": 10,   # q1:2 q2:2 q3:2 q4:2 q5:2 → 10
-    }
+    # AFTER (actual max values from question_bank.py):
+MAX_SCORES = {
+    "iron":        13,   # q1:2 q2:3 q3:2 q4:2 q5:2 q6:2
+    "b12":         14,   # q1:4 q2:2 q3:2 q4:2 q5:2 q6:2
+    "zinc":        16,   # q1:4 q2:3 q3:2 q4:2 q5:3 q6:2
+    "protein":     18,   # q1:6 q2:4 q3:2 q4:2 q5:2 q6:2
+    "dehydration": 10,   # q1:2 q2:2 q3:2 q4:2 q5:2
+}
 
     # ── Derive risk levels from symptom scores ────────────────────────────
     def score_to_risk(deficiency: str, raw_score: int) -> tuple[str, float]:
