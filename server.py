@@ -14,23 +14,14 @@ from typing import Optional
 # ── Try to import ML deps (graceful fallback for demo without model file) ──
 # AFTER (fixed):
 try:
-<<<<<<< HEAD
     import tensorflow as tf
     from tensorflow.keras.models import load_model
     from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
     import cv2
     TF_AVAILABLE = True
-=======
-        import tensorflow as tf
-        from tensorflow.keras.models import load_model
-        from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
-        import cv2
-        TF_AVAILABLE = True
->>>>>>> a18156fbfb715b3f046176e16e2624dc4066ae49
 except ImportError:
     TF_AVAILABLE = False
     print("⚠️  TensorFlow/OpenCV not available — /predict will use demo mode")
-
 # ── Local modules ──────────────────────────────────────────────────────────
 from score_engine import calculate_score
 from question_selector import get_questions
@@ -80,6 +71,7 @@ IMG_SIZE = (224, 224)
 
 # AFTER — guard with TF_AVAILABLE check, and move function inside the block:
 if TF_AVAILABLE:
+    if TF_AVAILABLE:
     def preprocess_image_bytes(image_bytes: bytes) -> np.ndarray:
         arr = np.frombuffer(image_bytes, dtype=np.uint8)
         img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
