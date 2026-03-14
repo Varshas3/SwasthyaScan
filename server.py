@@ -44,10 +44,10 @@ MODEL_PATH = "health_model.keras"
 model = None
 # Option B: If you want 5 classes, add protein_deficiency images,
 # then update server.py:
-CLASS_NAMES = ["iron_deficiency", "dehydration", "vitamin_b12_deficiency", "zinc_deficiency"]
+CLASS_NAMES = ["dehydration", "iron_deficiency", "vitamin_b12_deficiency", "zinc_deficiency"]
 CLASS_KEY_MAP = {
-    "iron_deficiency":        "iron",
     "dehydration":            "dehydration",
+    "iron_deficiency":        "iron",
     "vitamin_b12_deficiency": "b12",
     "zinc_deficiency":        "zinc",
 }
