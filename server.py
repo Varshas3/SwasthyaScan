@@ -14,19 +14,11 @@ from typing import Optional
 # ── Try to import ML deps (graceful fallback for demo without model file) ──
 # AFTER (fixed):
 try:
-<<<<<<< HEAD
     import tensorflow as tf
     from tensorflow.keras.models import load_model
     from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
     import cv2
     TF_AVAILABLE = True
-=======
-        import tensorflow as tf
-        from tensorflow.keras.models import load_model
-        from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
-        import cv2
-        TF_AVAILABLE = True
->>>>>>> a18156fbfb715b3f046176e16e2624dc4066ae49
 except ImportError:
     TF_AVAILABLE = False
     print("⚠️  TensorFlow/OpenCV not available — /predict will use demo mode")
@@ -53,12 +45,10 @@ MODEL_PATH = "health_model.keras"
 model = None
 # Option B: If you want 5 classes, add protein_deficiency images,
 # then update server.py:
-CLASS_NAMES = ["dehydration", "iron_deficiency", "protein_deficiency",
-               "vitamin_b12_deficiency", "zinc_deficiency"]
+CLASS_NAMES = ["iron_deficiency", "dehydration", "vitamin_b12_deficiency", "zinc_deficiency"]
 CLASS_KEY_MAP = {
-    "dehydration":            "dehydration",
     "iron_deficiency":        "iron",
-    "protein_deficiency":     "protein",
+    "dehydration":            "dehydration",
     "vitamin_b12_deficiency": "b12",
     "zinc_deficiency":        "zinc",
 }
@@ -102,7 +92,7 @@ def demo_predictions() -> dict:
     raw = np.random.dirichlet([3, 1, 2, 1])            # biased toward iron & b12
     return {
         "iron":    round(float(raw[0]), 4),
-        "protein": round(float(raw[1]), 4),
+        "dehydration": round(float(raw[1]), 4),
         "b12":     round(float(raw[2]), 4),
         "zinc":    round(float(raw[3]), 4),
     }
@@ -158,7 +148,7 @@ async def predict(
             raise HTTPException(status_code=422, detail=f"Could not process images: {errors}")
 
         # Average probabilities across all uploaded images
-        keys = ["iron", "protein", "b12", "zinc"]
+        keys = ["iron", "dehydration", "b12", "zinc"]
         probs = {k: round(float(np.mean([p[k] for p in all_preds])), 4) for k in keys}
 
     # ── Select which deficiencies to ask about ────────────────────────────
@@ -209,7 +199,6 @@ MAX_SCORES = {
     "iron":        13,   # q1:2 q2:3 q3:2 q4:2 q5:2 q6:2
     "b12":         14,   # q1:4 q2:2 q3:2 q4:2 q5:2 q6:2
     "zinc":        16,   # q1:4 q2:3 q3:2 q4:2 q5:3 q6:2
-    "protein":     18,   # q1:6 q2:4 q3:2 q4:2 q5:2 q6:2
     "dehydration": 10,   # q1:2 q2:2 q3:2 q4:2 q5:2
 }
 
@@ -282,14 +271,7 @@ MAX_SCORES = {
             "detail_mod":  "Moderate wound-healing delay noted",
             "detail_low":  "No significant zinc markers detected",
         },
-        "protein": {
-            "label": "Protein Deficiency",
-            "icon": "🥩",
-            "color": "#f97316", "bg": "#fff7ed", "border": "#fed7aa",
-            "detail_high": "Nail brittleness & oedema markers",
-            "detail_mod":  "Mild muscle and skin changes noted",
-            "detail_low":  "No significant protein markers detected",
-        },
+        
         "dehydration": {
             "label": "Dehydration",
             "icon": "💧",

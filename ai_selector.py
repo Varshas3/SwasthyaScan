@@ -2,7 +2,7 @@ def select_deficiencies(ai_prediction, threshold=0.45, max_deficiencies=3):
     """
     Select which deficiencies to screen for.
 
-    Image-model deficiencies (iron, b12, zinc, protein) are chosen based on
+    Image-model deficiencies (iron, b12, zinc, dehydration) are chosen based on
     the model's predicted probabilities.
 
     Dehydration has no image-model class (visual biomarkers are too subtle to
