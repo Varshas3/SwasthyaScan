@@ -380,9 +380,9 @@ function QuestionnairePage({ onNext, onBack, predictResult }) {
                 <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
                   {group.map((q, i) => {
                     const isAnswered = !!answers[q.qid];
-                    const opts = q.options
-  ? OPTION_ORDER.filter(o => Object.keys(q.options).includes(o))
-  : (QUESTION_META[q.qid]?.options || []);
+                    const opts = q.options && typeof q.options === 'object' && !Array.isArray(q.options)
+                     ? OPTION_ORDER.filter(o => Object.keys(q.options).includes(o))
+                     : (QUESTION_META[q.qid]?.options || q.options || []);
                     return (
                       <div key={q.qid} style={{ padding:"18px", borderRadius:14,
                         background:isAnswered?"#f0f9ff":"#f8fafc",
