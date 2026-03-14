@@ -99,43 +99,31 @@ question_bank = {
         },
     ],
 
-    '''"protein": [
-        {
-            "id": "protein_q1",
-            "text": "Have you noticed unusual swelling in your ankles, feet, or abdomen?",
-            "options": {"Never": 0, "Sometimes": 3, "Often": 6}
-        },
-        {
-            "id": "protein_q2",
-            "text": "Have you noticed your muscles becoming noticeably smaller or 'wasted' looking?",
-            "options": {"Never": 0, "Sometimes": 2, "Often": 4}
-        },
-        {
-            "id": "protein_q3",
-            "text": "Do you feel a significant loss of strength, such as having trouble climbing stairs?",
-            "options": {"Never": 0, "Sometimes": 1, "Often": 2}
-        },
-        {
-            "id": "protein_q4",
-            "text": "Has your hair become very thin, brittle, or has it changed color or pigment?",
-            "options": {"Yes": 2, "No": 0}
-        },
-        {
-            "id": "protein_q5",
-            "text": "Do you find yourself feeling constantly hungry, even shortly after eating a meal?",
-            "options": {"Never": 0, "Sometimes": 1, "Often": 2}
-        },
-        {
-            "id": "protein_q6",
-            "text": "Do you have sores on your skin that are very slow to heal?",
-            "options": {"Never": 0, "Sometimes": 1, "Often": 2}
-        },
-    ],'''
+    # FIX 3: Protein questions were previously wrapped in a string literal ('''"protein": [...]''')
+    # which is valid Python syntax but silently excluded the key from the dict.
+    # Replaced with proper block comments. Protein was removed from the image model
+    # (replaced by dehydration) — re-add this block and update CLASS_NAMES/CLASS_KEY_MAP
+    # in server.py if you restore protein to the model.
+    #
+    # "protein": [
+    #     {"id": "protein_q1", "text": "Have you noticed unusual swelling in your ankles, feet, or abdomen?",
+    #      "options": {"Never": 0, "Sometimes": 3, "Often": 6}},
+    #     {"id": "protein_q2", "text": "Have you noticed your muscles becoming noticeably smaller or 'wasted' looking?",
+    #      "options": {"Never": 0, "Sometimes": 2, "Often": 4}},
+    #     {"id": "protein_q3", "text": "Do you feel a significant loss of strength, such as having trouble climbing stairs?",
+    #      "options": {"Never": 0, "Sometimes": 1, "Often": 2}},
+    #     {"id": "protein_q4", "text": "Has your hair become very thin, brittle, or has it changed color or pigment?",
+    #      "options": {"Yes": 2, "No": 0}},
+    #     {"id": "protein_q5", "text": "Do you find yourself feeling constantly hungry, even shortly after eating a meal?",
+    #      "options": {"Never": 0, "Sometimes": 1, "Often": 2}},
+    #     {"id": "protein_q6", "text": "Do you have sores on your skin that are very slow to heal?",
+    #      "options": {"Never": 0, "Sometimes": 1, "Often": 2}},
+    # ],
 
     # ── Dehydration ───────────────────────────────────────────────────────
     # Not detected by the image model (visual biomarkers are subtle).
     # Always included as a symptom-only screener via ai_selector.py.
-    # MAX_SCORE = 10  (5+2+1+1+2 — see server.py)
+    # MAX_SCORE = 10  (q1:2 q2:2 q3:2 q4:2 q5:2)
     "dehydration": [
         {
             "id": "dehydration_q1",

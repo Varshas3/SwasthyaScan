@@ -6,6 +6,9 @@ const API_BASE = "http://localhost:8000";
 
 // ─── STATIC QUESTION DEFINITIONS ─────────────────────────────────────────────
 // Used to render questions returned by /predict. Keyed by qid for fast lookup.
+// FIX 4: Removed dead protein_q1–protein_q6 entries — protein_deficiency is no
+// longer a class in the image model (replaced by dehydration). These entries
+// could never be triggered and caused misleading dead code.
 const QUESTION_META = {
   iron_q1: { text: "How often do you feel extreme fatigue or shortness of breath during mild activities like walking?", category: "Fatigue & Breathing",  deficiency: "iron",        icon: "😮‍💨", options: ["Often","Sometimes","Never"] },
   iron_q2: { text: "Do you have strong cravings for non-food items such as ice, dirt, paper, or clay (pica)?",          category: "Pica Symptoms",      deficiency: "iron",        icon: "🧊", options: ["Yes","No"] },
@@ -25,12 +28,6 @@ const QUESTION_META = {
   zinc_q4: { text: "Do you have white spots, ridges, or horizontal lines on your fingernails?",                         category: "Nail Changes",       deficiency: "zinc",        icon: "💅", options: ["Yes","No"] },
   zinc_q5: { text: "Do you seem to catch colds or infections more easily than those around you?",                       category: "Immunity",           deficiency: "zinc",        icon: "🤧", options: ["Often","Sometimes","Never"] },
   zinc_q6: { text: "Do you have persistent skin rashes or acne that does not respond to typical treatments?",           category: "Skin Issues",        deficiency: "zinc",        icon: "🫧", options: ["Often","Sometimes","Never"] },
-  protein_q1: { text: "Have you noticed unusual swelling or puffiness in your feet, ankles, or legs (edema)?",         category: "Edema / Swelling",   deficiency: "protein",     icon: "🦶", options: ["Often","Sometimes","Never"] },
-  protein_q2: { text: "Do you experience muscle weakness, cramps, or find physical tasks harder than before?",          category: "Muscle Weakness",    deficiency: "protein",     icon: "💪", options: ["Often","Sometimes","Never"] },
-  protein_q3: { text: "Has your hair become noticeably brittle, thin, or are you losing more hair than usual?",         category: "Hair & Nails",       deficiency: "protein",     icon: "💅", options: ["Often","Sometimes","Never"] },
-  protein_q4: { text: "Do your fingernails break easily, grow slowly, or show unusual ridges or discoloration?",        category: "Nail Changes",       deficiency: "protein",     icon: "🖐️", options: ["Yes","No"] },
-  protein_q5: { text: "Do you feel hungry shortly after eating, or find it difficult to feel satisfied after meals?",   category: "Appetite & Satiety", deficiency: "protein",     icon: "🍽️", options: ["Often","Sometimes","Never"] },
-  protein_q6: { text: "Has your skin become noticeably flaky, dry, or developed unusual rashes recently?",              category: "Skin Changes",       deficiency: "protein",     icon: "🫧", options: ["Often","Sometimes","Never"] },
   // ── Dehydration — symptom-only screener, always included ─────────────────
   dehydration_q1: { text: "Do you feel unusually weak, dizzy, or tired during the day?",                               category: "Energy & Dizziness", deficiency: "dehydration", icon: "😵", options: ["Often","Sometimes","Never"] },
   dehydration_q2: { text: "Do your eyes appear sunken or unusually tired?",                                             category: "Eye Appearance",     deficiency: "dehydration", icon: "👁️", options: ["Often","Sometimes","Never"] },
@@ -43,7 +40,6 @@ const DEFICIENCY_LABELS = {
   iron:        "Iron Deficiency",
   b12:         "Vitamin B12 Deficiency",
   zinc:        "Zinc Deficiency",
-  protein:     "Protein Deficiency",
   dehydration: "Dehydration",
 };
 
@@ -114,8 +110,8 @@ function StepIndicator({ current }) {
 
 // ─── PAGE 1: UPLOAD ───────────────────────────────────────────────────────────
 function UploadPage({ onNext }) {
-  const [uploads, setUploads] = useState({});        // { nails: File, ... }
-  const [previews, setPreviews] = useState({});      // { nails: objectURL, ... }
+  const [uploads, setUploads] = useState({});
+  const [previews, setPreviews] = useState({});
   const [dragging, setDragging] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -151,7 +147,6 @@ function UploadPage({ onNext }) {
         throw new Error(err.detail || `Server error ${res.status}`);
       }
       const data = await res.json();
-      // data = { probabilities, selected_deficiencies, questions, demo_mode }
       onNext(data);
     } catch (e) {
       setError(e.message || "Could not reach the server. Make sure it's running on port 8000.");
@@ -278,9 +273,6 @@ function QuestionnairePage({ onNext, onBack, predictResult }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Build active questions from /predict response
-  // predictResult.questions is [{id, text, options}] from question_bank.py
-  // We merge with QUESTION_META for icon/category display
   const activeQuestions = (predictResult?.questions || []).map(q => ({
     ...q,
     qid: q.id,
@@ -290,8 +282,8 @@ function QuestionnairePage({ onNext, onBack, predictResult }) {
   const answered   = Object.keys(answers).length;
   const progress   = activeQuestions.length > 0 ? Math.round((answered / activeQuestions.length) * 100) : 0;
 
-  // ── Dehydration added here — always present since ai_selector appends it ──
-  const deficiencyOrder = ["iron", "b12", "zinc", "protein", "dehydration"];
+  // FIX 4 continued: removed "protein" from deficiency order — no longer a model class
+  const deficiencyOrder = ["iron", "b12", "zinc", "dehydration"];
 
   const optionColor = (opt) => {
     if (opt==="Yes"||opt==="Often")   return { border:"#ef4444", bg:"#fef2f2", dot:"#ef4444" };
@@ -338,7 +330,6 @@ function QuestionnairePage({ onNext, onBack, predictResult }) {
 
         <StepIndicator current={1} />
 
-        {/* Show which deficiencies were detected from images */}
         {predictResult?.selected_deficiencies?.length > 0 && (
           <div style={{ background:"#f0f9ff", border:"1px solid #bae6fd", borderRadius:12,
             padding:"12px 16px", marginTop:16, display:"flex", gap:10, flexWrap:"wrap", alignItems:"center" }}>
@@ -384,7 +375,6 @@ function QuestionnairePage({ onNext, onBack, predictResult }) {
             const group = activeQuestions.filter(q => q.deficiency === def);
             if (group.length === 0) return null;
 
-            // Dehydration gets a distinct blue badge to signal it's symptom-only
             const isDehydration = def === "dehydration";
             const badgeBg     = isDehydration ? "#eff6ff" : "#e0f2fe";
             const badgeColor  = isDehydration ? "#1d4ed8" : "#0284c7";
@@ -562,7 +552,6 @@ function DashboardPage({ onRestart, scoreResult }) {
       <div style={{ maxWidth:1200, margin:"0 auto", padding:"28px 24px 60px" }}>
         <StepIndicator current={2} />
 
-        {/* Risk Cards — live from API */}
         <div style={{ marginTop:28 }}>
           <h2 style={{ fontFamily:"'Syne',sans-serif", fontSize:18, fontWeight:700, color:"#0f172a", margin:"0 0 14px" }}>Health Risk Indicators</h2>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:14 }}>
@@ -575,7 +564,6 @@ function DashboardPage({ onRestart, scoreResult }) {
                 <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:"#64748b",
                   fontWeight:600, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8 }}>
                   {card.id.toUpperCase()}
-                  {/* Show "symptom only" label for dehydration since it has no image model */}
                   {card.id === "dehydration" && (
                     <span style={{ marginLeft:6, fontSize:10, fontWeight:500, color:"#94a3b8",
                       textTransform:"none", letterSpacing:0, fontStyle:"italic" }}>· symptom-only</span>
@@ -587,7 +575,6 @@ function DashboardPage({ onRestart, scoreResult }) {
                   <div style={{ padding:"4px 12px", borderRadius:999, background:card.bg,
                     border:`1.5px solid ${card.border}`, fontFamily:"'DM Sans',sans-serif",
                     fontWeight:800, fontSize:13, color:card.color }}>{card.status}</div>
-                  {/* Only show image probability for cards that have an image model */}
                   {card.image_prob > 0 && (
                     <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:"#94a3b8" }}>
                       img: {card.image_prob}%
@@ -604,7 +591,6 @@ function DashboardPage({ onRestart, scoreResult }) {
           </div>
         </div>
 
-        {/* Confidence + Breakdown */}
         <div style={{ marginTop:28, display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
           <div style={{ background:"#fff", borderRadius:16, padding:"28px", border:"1.5px solid #e2e8f0", boxShadow:"0 2px 10px rgba(0,0,0,.05)" }}>
             <h3 style={{ fontFamily:"'Syne',sans-serif", fontSize:16, fontWeight:700, color:"#0f172a", margin:"0 0 20px" }}>Confidence Scores</h3>
@@ -629,7 +615,6 @@ function DashboardPage({ onRestart, scoreResult }) {
           </div>
         </div>
 
-        {/* Recommendations — live from API */}
         <div style={{ marginTop:24 }}>
           <h2 style={{ fontFamily:"'Syne',sans-serif", fontSize:18, fontWeight:700, color:"#0f172a", margin:"0 0 14px" }}>Personalised Recommendations</h2>
           <div style={{ background:"#fff", borderRadius:16, padding:"24px", border:"1.5px solid #e2e8f0", boxShadow:"0 2px 10px rgba(0,0,0,.05)" }}>
@@ -648,7 +633,6 @@ function DashboardPage({ onRestart, scoreResult }) {
           </div>
         </div>
 
-        {/* Disclaimer */}
         <div style={{ marginTop:24, padding:"16px 20px", background:"#f0f9ff", border:"1px solid #bae6fd",
           borderRadius:12, display:"flex", gap:12, alignItems:"flex-start" }}>
           <span style={{ fontSize:18, flexShrink:0 }}>ℹ️</span>
@@ -665,8 +649,8 @@ function DashboardPage({ onRestart, scoreResult }) {
 // ─── APP SHELL ────────────────────────────────────────────────────────────────
 export default function App() {
   const [page, setPage]               = useState("upload");
-  const [predictResult, setPredictResult] = useState(null);   // from /predict
-  const [scoreResult, setScoreResult]     = useState(null);   // from /score
+  const [predictResult, setPredictResult] = useState(null);
+  const [scoreResult, setScoreResult]     = useState(null);
 
   const handleUploadNext = (data) => {
     setPredictResult(data);

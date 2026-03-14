@@ -1,4 +1,6 @@
-pip install tensorflow opencv-python matplotlib scikit-learn
+# Run this before executing the script:
+# pip install tensorflow opencv-python matplotlib scikit-learn
+
 import os
 import tensorflow as tf
 from tensorflow.keras.preprocessing import image_dataset_from_directory
@@ -55,12 +57,12 @@ data_augmentation = tf.keras.Sequential([
 ])
 
 base_model = MobileNetV2(input_shape=IMG_SIZE + (3,), include_top=False, weights="imagenet")
-base_model.trainable = False # Freeze entirely for Phase 1
+base_model.trainable = False  # Freeze entirely for Phase 1
 
 # Build using Functional API to protect Batch Normalization
 inputs = tf.keras.Input(shape=IMG_SIZE + (3,))
 x = data_augmentation(inputs)
-x = base_model(x, training=False) # Safely bypass Batch Normalization updates
+x = base_model(x, training=False)  # Safely bypass Batch Normalization updates
 x = layers.GlobalAveragePooling2D()(x)
 x = layers.Dense(128, activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
 x = layers.Dropout(0.5)(x)

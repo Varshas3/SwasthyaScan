@@ -12,7 +12,6 @@ import os
 from typing import Optional
 
 # ── Try to import ML deps (graceful fallback for demo without model file) ──
-# AFTER (fixed):
 try:
     import tensorflow as tf
     from tensorflow.keras.models import load_model
@@ -22,6 +21,7 @@ try:
 except ImportError:
     TF_AVAILABLE = False
     print("⚠️  TensorFlow/OpenCV not available — /predict will use demo mode")
+
 # ── Local modules ──────────────────────────────────────────────────────────
 from score_engine import calculate_score
 from question_selector import get_questions
@@ -42,8 +42,6 @@ app.add_middleware(
 # ── Model loading ──────────────────────────────────────────────────────────
 MODEL_PATH = "health_model.keras"
 model = None
-# Option B: If you want 5 classes, add protein_deficiency images,
-# then update server.py:
 CLASS_NAMES = ["dehydration", "iron_deficiency", "vitamin_b12_deficiency", "zinc_deficiency"]
 CLASS_KEY_MAP = {
     "dehydration":            "dehydration",
@@ -67,9 +65,8 @@ load_keras_model()
 # ── Image preprocessing ────────────────────────────────────────────────────
 IMG_SIZE = (224, 224)
 
-# AFTER — guard with TF_AVAILABLE check, and move function inside the block:
+# FIX 1: Removed duplicate `if TF_AVAILABLE:` block — functions now defined once correctly
 if TF_AVAILABLE:
-    if TF_AVAILABLE:
     def preprocess_image_bytes(image_bytes: bytes) -> np.ndarray:
         arr = np.frombuffer(image_bytes, dtype=np.uint8)
         img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
@@ -91,11 +88,22 @@ def demo_predictions() -> dict:
     np.random.seed(42)
     raw = np.random.dirichlet([3, 1, 2, 1])            # biased toward iron & b12
     return {
-        "iron":    round(float(raw[0]), 4),
+        "iron":        round(float(raw[0]), 4),
         "dehydration": round(float(raw[1]), 4),
-        "b12":     round(float(raw[2]), 4),
-        "zinc":    round(float(raw[3]), 4),
+        "b12":         round(float(raw[2]), 4),
+        "zinc":        round(float(raw[3]), 4),
     }
+
+
+# FIX 2: MAX_SCORES moved to module level — was previously mis-indented inside
+# the /score endpoint function body, causing a NameError on first call.
+MAX_SCORES = {
+    "iron":        13,   # q1:2 q2:3 q3:2 q4:2 q5:2 q6:2
+    "b12":         14,   # q1:4 q2:2 q3:2 q4:2 q5:2 q6:2
+    "zinc":        16,   # q1:4 q2:3 q3:2 q4:2 q5:3 q6:2
+    "dehydration": 10,   # q1:2 q2:2 q3:2 q4:2 q5:2
+}
+
 
 # ══════════════════════════════════════════════════════════════════════════
 # ENDPOINT 1 — POST /predict
@@ -116,8 +124,8 @@ async def predict(
     """
     Returns:
     {
-      "probabilities": {"iron": 0.82, "protein": 0.55, "b12": 0.31, "zinc": 0.12},
-      "selected_deficiencies": ["iron", "protein", "dehydration"],
+      "probabilities": {"iron": 0.82, "b12": 0.31, "zinc": 0.12, "dehydration": 0.05},
+      "selected_deficiencies": ["iron", "b12", "dehydration"],
       "questions": [...],          // from question_bank.py
       "demo_mode": false
     }
@@ -186,24 +194,15 @@ async def score(req: ScoreRequest):
       "risk_levels":    {"iron": "High", "b12": "Low", "dehydration": "Moderate"},
       "confidence":     {"image": 78, "symptom": 65, "overall": 72},
       "risk_cards":     [...],
+      "recommendations": [...]
     }
     """
     # ── Score the questionnaire ───────────────────────────────────────────
     questions = get_questions(req.selected_deficiencies)
     symptom_scores = calculate_score(req.answers, questions)   # score_engine.py
 
-    # ── Max possible score per deficiency (for normalisation) ─────────────
-    # Calculated as the sum of the highest option value across all questions.
-    # AFTER (actual max values from question_bank.py):
-MAX_SCORES = {
-    "iron":        13,   # q1:2 q2:3 q3:2 q4:2 q5:2 q6:2
-    "b12":         14,   # q1:4 q2:2 q3:2 q4:2 q5:2 q6:2
-    "zinc":        16,   # q1:4 q2:3 q3:2 q4:2 q5:3 q6:2
-    "dehydration": 10,   # q1:2 q2:2 q3:2 q4:2 q5:2
-}
-
     # ── Derive risk levels from symptom scores ────────────────────────────
-    def score_to_risk(deficiency: str, raw_score: int) -> tuple[str, float]:
+    def score_to_risk(deficiency: str, raw_score: int) -> tuple:
         """Returns (label, 0-1 fraction)."""
         max_s = MAX_SCORES.get(deficiency, 14)
         fraction = min(raw_score / max_s, 1.0)
@@ -271,7 +270,6 @@ MAX_SCORES = {
             "detail_mod":  "Moderate wound-healing delay noted",
             "detail_low":  "No significant zinc markers detected",
         },
-        
         "dehydration": {
             "label": "Dehydration",
             "icon": "💧",
@@ -324,11 +322,6 @@ MAX_SCORES = {
             {"category": "Tests", "icon": "🔬", "text": "Serum zinc or alkaline phosphatase test recommended"},
             {"category": "Diet",  "icon": "🌾", "text": "Include pumpkin seeds, legumes, beef, and whole grains"},
             {"category": "Tip",   "icon": "⚠️", "text": "Avoid taking zinc supplements with iron or calcium supplements"},
-        ],
-        "protein": [
-            {"category": "Tests", "icon": "🔬", "text": "Serum albumin and total protein blood test"},
-            {"category": "Diet",  "icon": "🍗", "text": "Increase intake of lean meats, legumes, dairy, eggs, and tofu"},
-            {"category": "Tip",   "icon": "🏋️", "text": "Aim for 0.8–1.2 g of protein per kg of body weight daily"},
         ],
         "dehydration": [
             {"category": "Action",  "icon": "💧", "text": "Aim for 8–10 glasses of water per day; more in hot weather or after exercise"},
