@@ -13,8 +13,10 @@ from typing import Optional
 
 # ── Try to import ML deps (graceful fallback for demo without model file) ──
 try:
+    try:
     import tensorflow as tf
     from tensorflow.keras.models import load_model
+    from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
     import cv2
     TF_AVAILABLE = True
 except ImportError:
@@ -67,15 +69,14 @@ load_keras_model()
 IMG_SIZE = (224, 224)
 
 def preprocess_image_bytes(image_bytes: bytes) -> np.ndarray:
-    """Decode image bytes → normalised (224,224,3) float32 array."""
     arr = np.frombuffer(image_bytes, dtype=np.uint8)
     img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
     if img is None:
         raise ValueError("Could not decode image")
     img = cv2.resize(img, IMG_SIZE)
-    img = img.astype(np.float32) / 255.0
+    img = img.astype(np.float32)
+    img = preprocess_input(img)
     return img
-
 def predict_single(img_array: np.ndarray) -> dict:
     """Run model on one image → {iron: prob, protein: prob, b12: prob, zinc: prob}."""
     batch = np.expand_dims(img_array, axis=0)           # (1, 224, 224, 3)
