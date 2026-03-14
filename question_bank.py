@@ -99,7 +99,7 @@ question_bank = {
         },
     ],
 
-    "protein": [
+    '''"protein": [
         {
             "id": "protein_q1",
             "text": "Have you noticed unusual swelling in your ankles, feet, or abdomen?",
@@ -130,7 +130,7 @@ question_bank = {
             "text": "Do you have sores on your skin that are very slow to heal?",
             "options": {"Never": 0, "Sometimes": 1, "Often": 2}
         },
-    ],
+    ],'''
 
     # ── Dehydration ───────────────────────────────────────────────────────
     # Not detected by the image model (visual biomarkers are subtle).
