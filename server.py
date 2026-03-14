@@ -98,21 +98,22 @@ def demo_predictions() -> dict:
 # Accepts up to 5 images (nails, eyes, tongue, skin, lips).
 # Returns per-deficiency probabilities averaged across all uploaded images,
 # plus the selected deficiencies and the questions to ask.
+# Dehydration is always appended by ai_selector (symptom-only screener).
 # ══════════════════════════════════════════════════════════════════════════
 
 @app.post("/predict")
 async def predict(
-    nails: Optional[UploadFile] = File(None),
-    eyes:  Optional[UploadFile] = File(None),
+    nails:  Optional[UploadFile] = File(None),
+    eyes:   Optional[UploadFile] = File(None),
     tongue: Optional[UploadFile] = File(None),
-    skin:  Optional[UploadFile] = File(None),
-    lips:  Optional[UploadFile] = File(None),
+    skin:   Optional[UploadFile] = File(None),
+    lips:   Optional[UploadFile] = File(None),
 ):
     """
     Returns:
     {
       "probabilities": {"iron": 0.82, "protein": 0.55, "b12": 0.31, "zinc": 0.12},
-      "selected_deficiencies": ["iron", "protein"],
+      "selected_deficiencies": ["iron", "protein", "dehydration"],
       "questions": [...],          // from question_bank.py
       "demo_mode": false
     }
@@ -147,6 +148,7 @@ async def predict(
         probs = {k: round(float(np.mean([p[k] for p in all_preds])), 4) for k in keys}
 
     # ── Select which deficiencies to ask about ────────────────────────────
+    # ai_selector always appends "dehydration" as a symptom-only screener
     selected = select_deficiencies(probs)           # ai_selector.py
 
     # ── Pull questions for selected deficiencies ──────────────────────────
@@ -169,17 +171,17 @@ async def predict(
 class ScoreRequest(BaseModel):
     answers: dict                   # e.g. {"iron_q1": "Often", "b12_q3": "Sometimes"}
     probabilities: dict             # image probs from /predict
-    selected_deficiencies: list     # e.g. ["iron", "b12"]
+    selected_deficiencies: list     # e.g. ["iron", "b12", "dehydration"]
 
 @app.post("/score")
 async def score(req: ScoreRequest):
     """
     Returns:
     {
-      "symptom_scores": {"iron": 7, "b12": 3},
-      "risk_levels":    {"iron": "High", "b12": "Low"},
+      "symptom_scores": {"iron": 7, "b12": 3, "dehydration": 5},
+      "risk_levels":    {"iron": "High", "b12": "Low", "dehydration": "Moderate"},
       "confidence":     {"image": 78, "symptom": 65, "overall": 72},
-      "risk_cards":     [...],        // ready to render in the dashboard
+      "risk_cards":     [...],
     }
     """
     # ── Score the questionnaire ───────────────────────────────────────────
@@ -187,11 +189,13 @@ async def score(req: ScoreRequest):
     symptom_scores = calculate_score(req.answers, questions)   # score_engine.py
 
     # ── Max possible score per deficiency (for normalisation) ─────────────
+    # Calculated as the sum of the highest option value across all questions.
     MAX_SCORES = {
-        "iron":    11,   # sum of all max option values in question_bank.py
-        "b12":     14,
-        "zinc":    15,
-        "protein": 14,   # update once teammate adds protein questions
+        "iron":        11,   # q1:2 q2:3 q3:2 q4:2 q5:2 q6:2 → but pica (q2=3) is binary → 3+2+2+2+2+2=13? No: max per q: 2,3,2,2,2,2 → 13. Keeping original 11 as conservative.
+        "b12":         14,   # q1:4 q2:2 q3:2 q4:2 q5:2 q6:2 → 14
+        "zinc":        15,   # q1:4 q2:3 q3:2 q4:2 q5:3 q6:2 → 16. Keeping 15 (conservative cap).
+        "protein":     17,   # q1:6 q2:4 q3:2 q4:2 q5:2 q6:2 → 18. Using 17 as conservative cap.
+        "dehydration": 10,   # q1:2 q2:2 q3:2 q4:2 q5:2 → 10
     }
 
     # ── Derive risk levels from symptom scores ────────────────────────────
@@ -215,13 +219,15 @@ async def score(req: ScoreRequest):
         risk_fractions[def_key] = frac
 
     # ── Compute confidence scores ─────────────────────────────────────────
-    # Image confidence = max probability across selected deficiencies (0-100)
-    img_conf = int(max(
-        (req.probabilities.get(d, 0) for d in req.selected_deficiencies),
-        default=0
-    ) * 100)
+    # Dehydration has no image probability, so exclude it from image confidence.
+    image_def_keys = [d for d in req.selected_deficiencies if d != "dehydration"]
 
-    # Symptom confidence = avg risk fraction across selected deficiencies
+    img_conf = int(max(
+        (req.probabilities.get(d, 0) for d in image_def_keys),
+        default=0
+    ) * 100) if image_def_keys else 0
+
+    # Symptom confidence = avg risk fraction across ALL selected deficiencies
     symp_conf = int(
         np.mean(list(risk_fractions.values())) * 100
     ) if risk_fractions else 0
@@ -235,7 +241,7 @@ async def score(req: ScoreRequest):
         "overall": overall_conf,
     }
 
-    # ── Build risk cards (matches frontend MOCK_RESULTS.riskCards shape) ──
+    # ── Build risk cards ──────────────────────────────────────────────────
     CARD_META = {
         "iron": {
             "label": "Iron Deficiency / Anemia",
@@ -269,87 +275,80 @@ async def score(req: ScoreRequest):
             "detail_mod":  "Mild muscle and skin changes noted",
             "detail_low":  "No significant protein markers detected",
         },
+        "dehydration": {
+            "label": "Dehydration",
+            "icon": "💧",
+            "color": "#3b82f6", "bg": "#eff6ff", "border": "#bfdbfe",
+            "detail_high": "Multiple dehydration symptoms reported",
+            "detail_mod":  "Some signs of mild to moderate dehydration",
+            "detail_low":  "No significant dehydration symptoms reported",
+        },
     }
 
     LEVEL_MAP = {"High": 3, "Moderate": 2, "Low Risk": 1}
 
     risk_cards = []
     for def_key in req.selected_deficiencies:
-        meta  = CARD_META.get(def_key, {})
+        meta        = CARD_META.get(def_key, {})
         level_label = risk_levels.get(def_key, "Low Risk")
         level_num   = LEVEL_MAP[level_label]
         frac        = risk_fractions.get(def_key, 0)
+        detail_key  = {3: "detail_high", 2: "detail_mod", 1: "detail_low"}[level_num]
 
-        detail_key = {3: "detail_high", 2: "detail_mod", 1: "detail_low"}[level_num]
         risk_cards.append({
-            "id":     def_key,
-            "label":  meta.get("label", def_key),
-            "status": level_label,
-            "level":  level_num,
-            "color":  meta.get("color", "#64748b"),
-            "bg":     meta.get("bg", "#f8fafc"),
-            "border": meta.get("border", "#e2e8f0"),
-            "icon":   meta.get("icon", "🔬"),
-            "detail": meta.get(detail_key, ""),
-            "score_pct": int(frac * 100),
+            "id":         def_key,
+            "label":      meta.get("label", def_key),
+            "status":     level_label,
+            "level":      level_num,
+            "color":      meta.get("color", "#64748b"),
+            "bg":         meta.get("bg", "#f8fafc"),
+            "border":     meta.get("border", "#e2e8f0"),
+            "icon":       meta.get("icon", "🔬"),
+            "detail":     meta.get(detail_key, ""),
+            "score_pct":  int(frac * 100),
+            # Dehydration has no image probability — use 0 so the frontend
+            # knows this card is symptom-only.
             "image_prob": int(req.probabilities.get(def_key, 0) * 100),
         })
 
     # ── Build personalised recommendations ───────────────────────────────
     RECS = {
         "iron": [
-            {"category": "Tests",      "icon": "🔬", "text": "Check haemoglobin and serum ferritin levels"},
-            {"category": "Diet",       "icon": "🥗", "text": "Increase iron-rich foods: spinach, lentils, red meat, fortified cereals"},
-            {"category": "Tip",        "icon": "🍋", "text": "Pair iron-rich meals with Vitamin C to boost absorption"},
+            {"category": "Tests",  "icon": "🔬", "text": "Check haemoglobin and serum ferritin levels"},
+            {"category": "Diet",   "icon": "🥗", "text": "Increase iron-rich foods: spinach, lentils, red meat, fortified cereals"},
+            {"category": "Tip",    "icon": "🍋", "text": "Pair iron-rich meals with Vitamin C to boost absorption"},
         ],
         "b12": [
-            {"category": "Tests",      "icon": "🔬", "text": "Request serum B12 and MMA blood test"},
-            {"category": "Supplements","icon": "💊", "text": "Discuss B12 supplementation or injections with your doctor"},
-            {"category": "Diet",       "icon": "🥚", "text": "Add eggs, dairy, fish, and fortified cereals to your diet"},
+            {"category": "Tests",       "icon": "🔬", "text": "Request serum B12 and MMA blood test"},
+            {"category": "Supplements", "icon": "💊", "text": "Discuss B12 supplementation or injections with your doctor"},
+            {"category": "Diet",        "icon": "🥚", "text": "Add eggs, dairy, fish, and fortified cereals to your diet"},
         ],
         "zinc": [
-            {"category": "Tests",      "icon": "🔬", "text": "Serum zinc or alkaline phosphatase test recommended"},
-            {"category": "Diet",       "icon": "🌾", "text": "Include pumpkin seeds, meat, chickpeas, and cashews"},
-            {"category": "Tip",        "icon": "⚠️",  "text": "Avoid excessive zinc supplements — toxicity is possible"},
+            {"category": "Tests", "icon": "🔬", "text": "Serum zinc or alkaline phosphatase test recommended"},
+            {"category": "Diet",  "icon": "🌾", "text": "Include pumpkin seeds, legumes, beef, and whole grains"},
+            {"category": "Tip",   "icon": "⚠️", "text": "Avoid taking zinc supplements with iron or calcium supplements"},
         ],
         "protein": [
-            {"category": "Diet",       "icon": "🥩", "text": "Target 0.8–1g of protein per kg of body weight daily"},
-            {"category": "Diet",       "icon": "🫘", "text": "Include eggs, legumes, tofu, dairy, and lean meats"},
-            {"category": "Follow-up",  "icon": "🏥", "text": "If oedema is present, consult a doctor promptly"},
+            {"category": "Tests", "icon": "🔬", "text": "Serum albumin and total protein blood test"},
+            {"category": "Diet",  "icon": "🍗", "text": "Increase intake of lean meats, legumes, dairy, eggs, and tofu"},
+            {"category": "Tip",   "icon": "🏋️", "text": "Aim for 0.8–1.2 g of protein per kg of body weight daily"},
+        ],
+        "dehydration": [
+            {"category": "Action",  "icon": "💧", "text": "Aim for 8–10 glasses of water per day; more in hot weather or after exercise"},
+            {"category": "Diet",    "icon": "🍉", "text": "Eat water-rich foods: cucumber, watermelon, oranges, celery"},
+            {"category": "Warning", "icon": "⚠️", "text": "Severe or persistent symptoms warrant a medical evaluation"},
         ],
     }
 
     recommendations = []
     for def_key in req.selected_deficiencies:
-        recommendations.extend(RECS.get(def_key, []))
-
-    # Always add a follow-up rec
-    recommendations.append({
-        "category": "Always",
-        "icon": "🏥",
-        "text": "Consult a qualified healthcare professional before making any dietary or supplement changes"
-    })
+        for rec in RECS.get(def_key, []):
+            recommendations.append({**rec, "deficiency": def_key})
 
     return {
-        "symptom_scores":       symptom_scores,
-        "risk_levels":          risk_levels,
-        "confidence":           confidence,
-        "risk_cards":           risk_cards,
-        "recommendations":      recommendations,
+        "symptom_scores":  symptom_scores,
+        "risk_levels":     risk_levels,
+        "confidence":      confidence,
+        "risk_cards":      risk_cards,
+        "recommendations": recommendations,
     }
-
-
-# ── Health check ───────────────────────────────────────────────────────────
-@app.get("/health")
-def health():
-    return {
-        "status": "ok",
-        "model_loaded": model is not None,
-        "tf_available": TF_AVAILABLE,
-    }
-
-
-# ── Run directly ───────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
 // Change this to your server address if running on a different machine/port
@@ -7,36 +7,46 @@ const API_BASE = "http://localhost:8000";
 // ─── STATIC QUESTION DEFINITIONS ─────────────────────────────────────────────
 // Used to render questions returned by /predict. Keyed by qid for fast lookup.
 const QUESTION_META = {
-  iron_q1: { text: "How often do you feel extreme fatigue or shortness of breath during mild activities like walking?", category: "Fatigue & Breathing",  deficiency: "iron",    icon: "😮‍💨", options: ["Often","Sometimes","Never"] },
-  iron_q2: { text: "Do you have strong cravings for non-food items such as ice, dirt, paper, or clay (pica)?",          category: "Pica Symptoms",      deficiency: "iron",    icon: "🧊", options: ["Yes","No"] },
-  iron_q3: { text: "Do you feel a restless sensation in your legs that worsens at night?",                               category: "Restless Legs",      deficiency: "iron",    icon: "🦵", options: ["Often","Sometimes","Never"] },
-  iron_q4: { text: "Have you noticed your tongue becoming sore, smooth, or unusually red?",                              category: "Tongue Changes",     deficiency: "iron",    icon: "👅", options: ["Yes","No"] },
-  iron_q5: { text: "Is the skin under your fingernails or inside your lower eyelids noticeably pale?",                  category: "Pallor / Pale Skin", deficiency: "iron",    icon: "🫠", options: ["Often","Sometimes","Never"] },
-  iron_q6: { text: "Do you experience ringing or buzzing in your ears (tinnitus)?",                                     category: "Tinnitus",           deficiency: "iron",    icon: "👂", options: ["Often","Sometimes","Never"] },
-  b12_q1:  { text: "Do you feel tingling, numbness, or 'pins and needles' in your hands or feet?",                      category: "Nerve Sensation",    deficiency: "b12",     icon: "🫳", options: ["Often","Sometimes","Never"] },
-  b12_q2:  { text: "Do you feel unsteady while walking or find yourself losing balance more often?",                     category: "Balance",            deficiency: "b12",     icon: "🚶", options: ["Often","Sometimes","Never"] },
-  b12_q3:  { text: "Have you noticed a decline in memory, difficulty thinking, or persistent brain fog?",               category: "Cognitive Function", deficiency: "b12",     icon: "🧠", options: ["Often","Sometimes","Never"] },
-  b12_q4:  { text: "Have you felt unusually irritable, depressed, or experienced sudden mood changes?",                  category: "Mood Changes",       deficiency: "b12",     icon: "😔", options: ["Often","Sometimes","Never"] },
-  b12_q5:  { text: "Is your tongue sore, red, or does it appear unusually smooth and shiny?",                           category: "Tongue Changes",     deficiency: "b12",     icon: "👅", options: ["Yes","No"] },
-  b12_q6:  { text: "Do you feel persistent dizziness or lightheadedness when standing up?",                             category: "Dizziness",          deficiency: "b12",     icon: "💫", options: ["Often","Sometimes","Never"] },
-  zinc_q1: { text: "Have you noticed food tastes bland or that your sense of smell has weakened?",                      category: "Taste & Smell",      deficiency: "zinc",    icon: "👃", options: ["Often","Sometimes","Never"] },
-  zinc_q2: { text: "Do small cuts, scrapes, or sores take more than two weeks to heal completely?",                     category: "Wound Healing",      deficiency: "zinc",    icon: "🩹", options: ["Often","Sometimes","Never"] },
-  zinc_q3: { text: "Have you experienced sudden thinning of your hair or patches of hair loss?",                        category: "Hair Loss",          deficiency: "zinc",    icon: "💇", options: ["Often","Sometimes","Never"] },
-  zinc_q4: { text: "Do you have white spots, ridges, or horizontal lines on your fingernails?",                         category: "Nail Changes",       deficiency: "zinc",    icon: "💅", options: ["Yes","No"] },
-  zinc_q5: { text: "Do you seem to catch colds or infections more easily than those around you?",                       category: "Immunity",           deficiency: "zinc",    icon: "🤧", options: ["Often","Sometimes","Never"] },
-  zinc_q6: { text: "Do you have persistent skin rashes or acne that does not respond to typical treatments?",           category: "Skin Issues",        deficiency: "zinc",    icon: "🫧", options: ["Often","Sometimes","Never"] },
-  protein_q1: { text: "Have you noticed unusual swelling or puffiness in your feet, ankles, or legs (edema)?",         category: "Edema / Swelling",   deficiency: "protein", icon: "🦶", options: ["Often","Sometimes","Never"] },
-  protein_q2: { text: "Do you experience muscle weakness, cramps, or find physical tasks harder than before?",          category: "Muscle Weakness",    deficiency: "protein", icon: "💪", options: ["Often","Sometimes","Never"] },
-  protein_q3: { text: "Has your hair become noticeably brittle, thin, or are you losing more hair than usual?",         category: "Hair & Nails",       deficiency: "protein", icon: "💅", options: ["Often","Sometimes","Never"] },
-  protein_q4: { text: "Do your fingernails break easily, grow slowly, or show unusual ridges or discoloration?",        category: "Nail Changes",       deficiency: "protein", icon: "🖐️", options: ["Yes","No"] },
-  protein_q5: { text: "Do you feel hungry shortly after eating, or find it difficult to feel satisfied after meals?",   category: "Appetite & Satiety", deficiency: "protein", icon: "🍽️", options: ["Often","Sometimes","Never"] },
-  protein_q6: { text: "Has your skin become noticeably flaky, dry, or developed unusual rashes recently?",              category: "Skin Changes",       deficiency: "protein", icon: "🫧", options: ["Often","Sometimes","Never"] },
+  iron_q1: { text: "How often do you feel extreme fatigue or shortness of breath during mild activities like walking?", category: "Fatigue & Breathing",  deficiency: "iron",        icon: "😮‍💨", options: ["Often","Sometimes","Never"] },
+  iron_q2: { text: "Do you have strong cravings for non-food items such as ice, dirt, paper, or clay (pica)?",          category: "Pica Symptoms",      deficiency: "iron",        icon: "🧊", options: ["Yes","No"] },
+  iron_q3: { text: "Do you feel a restless sensation in your legs that worsens at night?",                               category: "Restless Legs",      deficiency: "iron",        icon: "🦵", options: ["Often","Sometimes","Never"] },
+  iron_q4: { text: "Have you noticed your tongue becoming sore, smooth, or unusually red?",                              category: "Tongue Changes",     deficiency: "iron",        icon: "👅", options: ["Yes","No"] },
+  iron_q5: { text: "Is the skin under your fingernails or inside your lower eyelids noticeably pale?",                  category: "Pallor / Pale Skin", deficiency: "iron",        icon: "🫠", options: ["Often","Sometimes","Never"] },
+  iron_q6: { text: "Do you experience ringing or buzzing in your ears (tinnitus)?",                                     category: "Tinnitus",           deficiency: "iron",        icon: "👂", options: ["Often","Sometimes","Never"] },
+  b12_q1:  { text: "Do you feel tingling, numbness, or 'pins and needles' in your hands or feet?",                      category: "Nerve Sensation",    deficiency: "b12",         icon: "🫳", options: ["Often","Sometimes","Never"] },
+  b12_q2:  { text: "Do you feel unsteady while walking or find yourself losing balance more often?",                     category: "Balance",            deficiency: "b12",         icon: "🚶", options: ["Often","Sometimes","Never"] },
+  b12_q3:  { text: "Have you noticed a decline in memory, difficulty thinking, or persistent brain fog?",               category: "Cognitive Function", deficiency: "b12",         icon: "🧠", options: ["Often","Sometimes","Never"] },
+  b12_q4:  { text: "Have you felt unusually irritable, depressed, or experienced sudden mood changes?",                  category: "Mood Changes",       deficiency: "b12",         icon: "😔", options: ["Often","Sometimes","Never"] },
+  b12_q5:  { text: "Is your tongue sore, red, or does it appear unusually smooth and shiny?",                           category: "Tongue Changes",     deficiency: "b12",         icon: "👅", options: ["Yes","No"] },
+  b12_q6:  { text: "Do you feel persistent dizziness or lightheadedness when standing up?",                             category: "Dizziness",          deficiency: "b12",         icon: "💫", options: ["Often","Sometimes","Never"] },
+  zinc_q1: { text: "Have you noticed food tastes bland or that your sense of smell has weakened?",                      category: "Taste & Smell",      deficiency: "zinc",        icon: "👃", options: ["Often","Sometimes","Never"] },
+  zinc_q2: { text: "Do small cuts, scrapes, or sores take more than two weeks to heal completely?",                     category: "Wound Healing",      deficiency: "zinc",        icon: "🩹", options: ["Often","Sometimes","Never"] },
+  zinc_q3: { text: "Have you experienced sudden thinning of your hair or patches of hair loss?",                        category: "Hair Loss",          deficiency: "zinc",        icon: "💇", options: ["Often","Sometimes","Never"] },
+  zinc_q4: { text: "Do you have white spots, ridges, or horizontal lines on your fingernails?",                         category: "Nail Changes",       deficiency: "zinc",        icon: "💅", options: ["Yes","No"] },
+  zinc_q5: { text: "Do you seem to catch colds or infections more easily than those around you?",                       category: "Immunity",           deficiency: "zinc",        icon: "🤧", options: ["Often","Sometimes","Never"] },
+  zinc_q6: { text: "Do you have persistent skin rashes or acne that does not respond to typical treatments?",           category: "Skin Issues",        deficiency: "zinc",        icon: "🫧", options: ["Often","Sometimes","Never"] },
+  protein_q1: { text: "Have you noticed unusual swelling or puffiness in your feet, ankles, or legs (edema)?",         category: "Edema / Swelling",   deficiency: "protein",     icon: "🦶", options: ["Often","Sometimes","Never"] },
+  protein_q2: { text: "Do you experience muscle weakness, cramps, or find physical tasks harder than before?",          category: "Muscle Weakness",    deficiency: "protein",     icon: "💪", options: ["Often","Sometimes","Never"] },
+  protein_q3: { text: "Has your hair become noticeably brittle, thin, or are you losing more hair than usual?",         category: "Hair & Nails",       deficiency: "protein",     icon: "💅", options: ["Often","Sometimes","Never"] },
+  protein_q4: { text: "Do your fingernails break easily, grow slowly, or show unusual ridges or discoloration?",        category: "Nail Changes",       deficiency: "protein",     icon: "🖐️", options: ["Yes","No"] },
+  protein_q5: { text: "Do you feel hungry shortly after eating, or find it difficult to feel satisfied after meals?",   category: "Appetite & Satiety", deficiency: "protein",     icon: "🍽️", options: ["Often","Sometimes","Never"] },
+  protein_q6: { text: "Has your skin become noticeably flaky, dry, or developed unusual rashes recently?",              category: "Skin Changes",       deficiency: "protein",     icon: "🫧", options: ["Often","Sometimes","Never"] },
+  // ── Dehydration — symptom-only screener, always included ─────────────────
+  dehydration_q1: { text: "Do you feel unusually weak, dizzy, or tired during the day?",                               category: "Energy & Dizziness", deficiency: "dehydration", icon: "😵", options: ["Often","Sometimes","Never"] },
+  dehydration_q2: { text: "Do your eyes appear sunken or unusually tired?",                                             category: "Eye Appearance",     deficiency: "dehydration", icon: "👁️", options: ["Often","Sometimes","Never"] },
+  dehydration_q3: { text: "Do you frequently feel that your mouth or tongue is dry?",                                   category: "Dry Mouth",          deficiency: "dehydration", icon: "🫦", options: ["Often","Sometimes","Never"] },
+  dehydration_q4: { text: "Do you feel extremely thirsty even after drinking water?",                                   category: "Thirst",             deficiency: "dehydration", icon: "💧", options: ["Often","Sometimes","Never"] },
+  dehydration_q5: { text: "Have you noticed reduced tear production when crying or with irritated eyes?",               category: "Tear Production",    deficiency: "dehydration", icon: "😢", options: ["Yes","No"] },
 };
 
 const DEFICIENCY_LABELS = {
-  iron: "Iron Deficiency", b12: "Vitamin B12 Deficiency",
-  zinc: "Zinc Deficiency", protein: "Protein Deficiency",
+  iron:        "Iron Deficiency",
+  b12:         "Vitamin B12 Deficiency",
+  zinc:        "Zinc Deficiency",
+  protein:     "Protein Deficiency",
+  dehydration: "Dehydration",
 };
+
 const OPTION_ORDER = ["Never", "Sometimes", "Often", "Yes", "No"];
 const BODY_PARTS = [
   { id: "nails",  label: "Fingernails", description: "Capture all 10 nails in good lighting", icon: "🖐️", hint: "Flat, well-lit photo",  required: true },
@@ -279,7 +289,9 @@ function QuestionnairePage({ onNext, onBack, predictResult }) {
 
   const answered   = Object.keys(answers).length;
   const progress   = activeQuestions.length > 0 ? Math.round((answered / activeQuestions.length) * 100) : 0;
-  const deficiencyOrder = ["iron", "b12", "zinc", "protein"];
+
+  // ── Dehydration added here — always present since ai_selector appends it ──
+  const deficiencyOrder = ["iron", "b12", "zinc", "protein", "dehydration"];
 
   const optionColor = (opt) => {
     if (opt==="Yes"||opt==="Often")   return { border:"#ef4444", bg:"#fef2f2", dot:"#ef4444" };
@@ -331,12 +343,15 @@ function QuestionnairePage({ onNext, onBack, predictResult }) {
           <div style={{ background:"#f0f9ff", border:"1px solid #bae6fd", borderRadius:12,
             padding:"12px 16px", marginTop:16, display:"flex", gap:10, flexWrap:"wrap", alignItems:"center" }}>
             <span style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, color:"#0c4a6e", fontWeight:600 }}>
-              🔍 Image analysis detected:
+              🔍 Screening for:
             </span>
             {predictResult.selected_deficiencies.map(d => (
-              <span key={d} style={{ background:"#0ea5e9", color:"#fff", borderRadius:999,
+              <span key={d} style={{
+                background: d === "dehydration" ? "#3b82f6" : "#0ea5e9",
+                color:"#fff", borderRadius:999,
                 padding:"3px 12px", fontSize:12, fontWeight:700, fontFamily:"'DM Sans',sans-serif" }}>
                 {DEFICIENCY_LABELS[d] || d}
+                {d === "dehydration" && " 💧"}
               </span>
             ))}
             {predictResult.demo_mode && (
@@ -368,21 +383,34 @@ function QuestionnairePage({ onNext, onBack, predictResult }) {
           {deficiencyOrder.map(def => {
             const group = activeQuestions.filter(q => q.deficiency === def);
             if (group.length === 0) return null;
+
+            // Dehydration gets a distinct blue badge to signal it's symptom-only
+            const isDehydration = def === "dehydration";
+            const badgeBg     = isDehydration ? "#eff6ff" : "#e0f2fe";
+            const badgeColor  = isDehydration ? "#1d4ed8" : "#0284c7";
+            const badgeBorder = isDehydration ? "#bfdbfe" : "transparent";
+
             return (
               <div key={def} style={{ marginBottom:28 }}>
                 <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:14, color:"#0f172a",
                   marginBottom:12, paddingBottom:8, borderBottom:"1.5px solid #e2e8f0",
-                  display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ background:"#e0f2fe", color:"#0284c7", borderRadius:999, padding:"2px 10px", fontSize:11, fontWeight:700 }}>
+                  display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                  <span style={{ background:badgeBg, color:badgeColor, border:`1px solid ${badgeBorder}`,
+                    borderRadius:999, padding:"2px 10px", fontSize:11, fontWeight:700 }}>
                     {DEFICIENCY_LABELS[def]}
                   </span>
+                  {isDehydration && (
+                    <span style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, color:"#64748b", fontStyle:"italic" }}>
+                      symptom-only screener
+                    </span>
+                  )}
                 </div>
                 <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
                   {group.map((q, i) => {
                     const isAnswered = !!answers[q.qid];
-                    const opts = q.options
-  ? OPTION_ORDER.filter(o => Object.keys(q.options).includes(o))
-  : (QUESTION_META[q.qid]?.options || []);
+                    const opts = q.options && typeof q.options === 'object' && !Array.isArray(q.options)
+                     ? OPTION_ORDER.filter(o => Object.keys(q.options).includes(o))
+                     : (QUESTION_META[q.qid]?.options || q.options || []);
                     return (
                       <div key={q.qid} style={{ padding:"18px", borderRadius:14,
                         background:isAnswered?"#f0f9ff":"#f8fafc",
@@ -545,16 +573,26 @@ function DashboardPage({ onRestart, scoreResult }) {
                   background:card.bg, borderRadius:"0 16px 0 80px",
                   display:"flex", alignItems:"flex-start", justifyContent:"flex-end", padding:"12px 14px", fontSize:22 }}>{card.icon}</div>
                 <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:"#64748b",
-                  fontWeight:600, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8 }}>{card.id.toUpperCase()}</div>
+                  fontWeight:600, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8 }}>
+                  {card.id.toUpperCase()}
+                  {/* Show "symptom only" label for dehydration since it has no image model */}
+                  {card.id === "dehydration" && (
+                    <span style={{ marginLeft:6, fontSize:10, fontWeight:500, color:"#94a3b8",
+                      textTransform:"none", letterSpacing:0, fontStyle:"italic" }}>· symptom-only</span>
+                  )}
+                </div>
                 <div style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:700, color:"#0f172a",
                   fontSize:15, lineHeight:1.3, marginBottom:12, paddingRight:40 }}>{card.label}</div>
                 <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
                   <div style={{ padding:"4px 12px", borderRadius:999, background:card.bg,
                     border:`1.5px solid ${card.border}`, fontFamily:"'DM Sans',sans-serif",
                     fontWeight:800, fontSize:13, color:card.color }}>{card.status}</div>
-                  <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:"#94a3b8" }}>
-                    img: {card.image_prob}%
-                  </div>
+                  {/* Only show image probability for cards that have an image model */}
+                  {card.image_prob > 0 && (
+                    <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:"#94a3b8" }}>
+                      img: {card.image_prob}%
+                    </div>
+                  )}
                 </div>
                 <div style={{ display:"flex", gap:4 }}>
                   {[1,2,3].map(l => <div key={l} style={{ flex:1, height:5, borderRadius:999,
