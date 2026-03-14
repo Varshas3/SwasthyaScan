@@ -13,12 +13,11 @@ from typing import Optional
 
 # ── Try to import ML deps (graceful fallback for demo without model file) ──
 try:
-    try:
-    import tensorflow as tf
-    from tensorflow.keras.models import load_model
-    from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
-    import cv2
-    TF_AVAILABLE = True
+        import tensorflow as tf
+        from tensorflow.keras.models import load_model
+        from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+        import cv2
+        TF_AVAILABLE = True
 except ImportError:
     TF_AVAILABLE = False
     print("⚠️  TensorFlow/OpenCV not available — /predict will use demo mode")
